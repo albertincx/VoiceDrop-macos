@@ -2,10 +2,28 @@ import AppKit
 import SwiftUI
 import AVFoundation
 
+extension Notification.Name {
+    static let toggleRecordingShortcut = Notification.Name("toggleRecordingShortcut")
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Spacebar shortcut monitor (Space = KeyCode 49)
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 49 {
+                // If user is actively typing in a text field or text editor, let Space work normally
+                if let responder = NSApp.keyWindow?.firstResponder as? NSTextView,
+                   responder.isSelectable && responder.isEditable {
+                    return event
+                }
+                NotificationCenter.default.post(name: .toggleRecordingShortcut, object: nil)
+                return nil
+            }
+            return event
+        }
+
         // Request microphone permission on launch
         if #available(macOS 14.0, *) {
             AVAudioApplication.requestRecordPermission { granted in

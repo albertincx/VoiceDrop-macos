@@ -6,10 +6,13 @@ import Combine
 class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isRecording: Bool = false
     @Published var isDenoising: Bool = false
+    @Published var isConvertingMP3: Bool = false
+    @Published var copiedMP3Feedback: Bool = false
     @Published var recordingDuration: TimeInterval = 0.0
     @Published var currentAudioLevel: Float = 0.0
     @Published var audioWaveform: [Float] = Array(repeating: 0.1, count: 24)
     @Published var currentRecordingURL: URL?
+    @Published var currentMP3URL: URL?
     @Published var recentRecordings: [URL] = []
     @Published var noiseSuppressionEnabled: Bool = true
     @Published var denoiseStrength: Double = 1.8 // 1.2 (Mild), 1.8 (Studio), 2.5 (Strong)
@@ -25,7 +28,6 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     private var recordingStartTime: Date?
 
     var recordingsDirectory: URL {
-        // First check relative directory next to the bundle / project
         let bundleFolder = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("Recordings", isDirectory: true)
         if FileManager.default.fileExists(atPath: bundleFolder.path) {
             return bundleFolder
@@ -92,6 +94,10 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 self.recentRecordings = sorted
                 if self.currentRecordingURL == nil, let first = sorted.first {
                     self.currentRecordingURL = first
+                    let mp3Candidate = first.deletingPathExtension().appendingPathExtension("mp3")
+                    if FileManager.default.fileExists(atPath: mp3Candidate.path) {
+                        self.currentMP3URL = mp3Candidate
+                    }
                 }
             }
         } catch {
@@ -134,7 +140,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     self.startRecording()
                 } else {
                     self.micPermissionGranted = false
-                    self.errorMessage = "Микрофон отключен в настройках системы. Нажмите 'Настройки macOS' для включения."
+                    self.errorMessage = "Микрофон отключен в настройках системы. Нажмите 'Сбросить и запросить окно'."
                     self.startRecording()
                 }
             }
@@ -145,6 +151,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         guard !isRecording else { return }
         errorMessage = nil
         isDenoised = false
+        currentMP3URL = nil
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
@@ -230,11 +237,13 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     self.isDenoised = true
                     self.loadRecentRecordings()
                     self.onRecordingFinished?(cleanURL)
+                    self.convertToMP3(fileURL: cleanURL) { _ in }
                 }
             } else {
                 self.loadRecentRecordings()
                 self.currentRecordingURL = url
                 self.onRecordingFinished?(url)
+                self.convertToMP3(fileURL: url) { _ in }
             }
         }
     }
@@ -263,6 +272,20 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
         if FileManager.default.fileExists(atPath: "denoise.py") {
             return URL(fileURLWithPath: "denoise.py").path
+        }
+        return nil
+    }
+
+    private func findConvertMP3Script() -> String? {
+        if let bundlePath = Bundle.main.path(forResource: "convert_mp3", ofType: "py") {
+            return bundlePath
+        }
+        let devScript = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("convert_mp3.py").path
+        if FileManager.default.fileExists(atPath: devScript) {
+            return devScript
+        }
+        if FileManager.default.fileExists(atPath: "convert_mp3.py") {
+            return URL(fileURLWithPath: "convert_mp3.py").path
         }
         return nil
     }
@@ -299,6 +322,83 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
     }
 
+    func convertToMP3(fileURL: URL, completion: @escaping (URL?) -> Void) {
+        let mp3URL = fileURL.deletingPathExtension().appendingPathExtension("mp3")
+        if FileManager.default.fileExists(atPath: mp3URL.path) {
+            DispatchQueue.main.async {
+                self.currentMP3URL = mp3URL
+                completion(mp3URL)
+            }
+            return
+        }
+
+        guard let pythonPath = findPythonExecutable(),
+              let scriptPath = findConvertMP3Script() else {
+            completion(nil)
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.isConvertingMP3 = true
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: pythonPath)
+            process.arguments = [scriptPath, fileURL.path, mp3URL.path]
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                print("MP3 conversion failed: \(error)")
+            }
+
+            DispatchQueue.main.async {
+                self.isConvertingMP3 = false
+                if FileManager.default.fileExists(atPath: mp3URL.path) {
+                    self.currentMP3URL = mp3URL
+                    self.loadRecentRecordings()
+                    completion(mp3URL)
+                } else {
+                    completion(nil)
+                }
+            }
+        }
+    }
+
+    func copyMP3ToClipboard() {
+        guard let url = currentRecordingURL else { return }
+
+        let mp3Candidate = url.deletingPathExtension().appendingPathExtension("mp3")
+        if FileManager.default.fileExists(atPath: mp3Candidate.path) {
+            self.currentMP3URL = mp3Candidate
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects([mp3Candidate as NSURL])
+            triggerCopiedMP3Feedback()
+            return
+        }
+
+        convertToMP3(fileURL: url) { [weak self] resultURL in
+            guard let self = self, let mp3 = resultURL else { return }
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects([mp3 as NSURL])
+            self.triggerCopiedMP3Feedback()
+        }
+    }
+
+    private func triggerCopiedMP3Feedback() {
+        DispatchQueue.main.async {
+            self.copiedMP3Feedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.copiedMP3Feedback = false
+        }
+    }
+
     func selectExternalFile() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -310,6 +410,9 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             self.isDenoised = false
             self.loadRecentRecordings()
             self.onRecordingFinished?(url)
+            if url.pathExtension.lowercased() == "wav" {
+                self.convertToMP3(fileURL: url) { _ in }
+            }
         }
     }
 }

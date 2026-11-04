@@ -59,6 +59,9 @@ struct ContentView: View {
                 player.loadAudio(url: first)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .toggleRecordingShortcut)) { _ in
+            recorder.toggleRecording()
+        }
     }
 
     // MARK: - Header
@@ -80,7 +83,7 @@ struct ContentView: View {
                         Text("VoiceDrop")
                             .font(.system(size: 16, weight: .bold))
 
-                        Text("v1.5.0 • Сборка: 04.11.2026 13:45")
+                        Text("v1.6.0 • Сборка: 04.11.2026 14:00")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
@@ -317,9 +320,22 @@ struct ContentView: View {
             // Waveform visualizer
             WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording)
 
-            Text(recorder.isRecording ? "Говорите в микрофон. Шумоподавление активно." : "Нажмите кнопку для начала записи голоса")
+            Text(recorder.isRecording ? "Говорите в микрофон. Шумоподавление активно." : "Нажмите кнопку или пробел для начала записи")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
+
+            // Spacebar shortcut hint
+            HStack(spacing: 6) {
+                Text("␣ Пробел")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(NSColor.controlColor))
+                    .cornerRadius(4)
+                Text(recorder.isRecording ? "— нажать, чтобы остановить запись" : "— нажать, чтобы начать запись")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
@@ -348,14 +364,16 @@ struct ContentView: View {
             }
 
             // The Draggable Card for Antigravity, Telegram, etc.
-            DraggableAudioCard(fileURL: fileURL, onCopyPath: {
+            DraggableAudioCard(fileURL: fileURL, mp3URL: recorder.currentMP3URL, onCopyPath: {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
                 pasteboard.setString(fileURL.path, forType: .string)
+            }, onCopyMP3: {
+                recorder.copyMP3ToClipboard()
             })
 
-            // Noise Reduction Quick Action
-            HStack {
+            // Actions Bar: Denoise & Copy MP3
+            HStack(spacing: 10) {
                 Button(action: {
                     recorder.applyDenoise(fileURL: fileURL, strength: recorder.denoiseStrength) { cleanURL in
                         player.loadAudio(url: cleanURL)
@@ -368,7 +386,7 @@ struct ContentView: View {
                             Text("Удаление шума...")
                         } else {
                             Image(systemName: "sparkles")
-                            Text(recorder.isDenoised ? "Шумоподавление применено ✓" : "Очистить от шума (Denoise)")
+                            Text(recorder.isDenoised ? "Шумоподавление применено ✓" : "Очистить от шума")
                         }
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -377,10 +395,31 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(recorder.isDenoising)
 
+                Button(action: {
+                    recorder.copyMP3ToClipboard()
+                }) {
+                    HStack(spacing: 6) {
+                        if recorder.isConvertingMP3 {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Конвертация в MP3...")
+                        } else {
+                            Image(systemName: recorder.copiedMP3Feedback ? "checkmark.circle.fill" : "music.note")
+                                .foregroundColor(recorder.copiedMP3Feedback ? .green : .orange)
+                            Text(recorder.copiedMP3Feedback ? "MP3 скопирован в буфер!" : "Скопировать как MP3")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(recorder.copiedMP3Feedback ? .green : .primary)
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(recorder.isConvertingMP3)
+                .help("Скопировать запись как MP3 файл в буфер обмена для вставки в Telegram, Slack или Antigravity")
+
                 Spacer()
 
                 if recorder.isDenoised {
-                    Text("Чистый голос без шума")
+                    Text("Чистый голос")
                         .font(.system(size: 11))
                         .foregroundColor(.green)
                 }

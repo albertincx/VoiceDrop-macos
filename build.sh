@@ -30,6 +30,10 @@ if [ -f denoise.py ]; then
     cp denoise.py "${RESOURCES_DIR}/denoise.py"
     chmod +x "${RESOURCES_DIR}/denoise.py"
 fi
+if [ -f convert_mp3.py ]; then
+    cp convert_mp3.py "${RESOURCES_DIR}/convert_mp3.py"
+    chmod +x "${RESOURCES_DIR}/convert_mp3.py"
+fi
 
 # Compile Swift sources
 SWIFT_FILES=(

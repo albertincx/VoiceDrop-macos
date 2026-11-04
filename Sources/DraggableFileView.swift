@@ -3,10 +3,13 @@ import AppKit
 
 struct DraggableAudioCard: View {
     let fileURL: URL
+    var mp3URL: URL? = nil
     let onCopyPath: () -> Void
+    var onCopyMP3: (() -> Void)? = nil
 
     @State private var isHovering: Bool = false
     @State private var showCopiedBadge: Bool = false
+    @State private var showCopiedMP3Badge: Bool = false
 
     var fileSizeString: String {
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
@@ -58,8 +61,36 @@ struct DraggableAudioCard: View {
 
             Spacer()
 
-            // Quick Actions: Copy File & Reveal in Finder
+            // Quick Actions: Copy MP3, Copy WAV File & Reveal in Finder
             HStack(spacing: 8) {
+                if let onCopyMP3 = onCopyMP3 {
+                    Button(action: {
+                        onCopyMP3()
+                        withAnimation {
+                            showCopiedMP3Badge = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation {
+                                showCopiedMP3Badge = false
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: showCopiedMP3Badge ? "checkmark.circle.fill" : "music.note")
+                                .foregroundColor(showCopiedMP3Badge ? .green : .orange)
+                            Text(showCopiedMP3Badge ? "Скопирован!" : "MP3")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(showCopiedMP3Badge ? .green : .orange)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.orange.opacity(0.12))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Скопировать запись как MP3 в буфер обмена")
+                }
+
                 Button(action: {
                     copyFileToClipboard()
                 }) {
@@ -68,7 +99,7 @@ struct DraggableAudioCard: View {
                         .foregroundColor(showCopiedBadge ? .green : .primary)
                 }
                 .buttonStyle(.plain)
-                .help("Скопировать файл аудио в буфер обмена (Cmd+C)")
+                .help("Скопировать WAV в буфер обмена (Cmd+C)")
 
                 Button(action: {
                     NSWorkspace.shared.activateFileViewerSelecting([fileURL])

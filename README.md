@@ -17,7 +17,8 @@
 
 ## 🌟 Highlights
 
-- **🎙️ One-Click Voice Recording**: Modern macOS SwiftUI interface with dynamic waveform visualization and duration metering.
+- **🎙️ One-Click / Spacebar Voice Recording**: Start and stop recordings with a single click or simply by pressing the **Spacebar** hotkey (`␣ Space`).
+- **🎵 MP3 Export & Copying**: Instant one-click conversion to high-quality `.mp3` (192 kbps) with dedicated clipboard copying (`Cmd+V` directly into Telegram, Slack, or Antigravity) alongside lossless WAV.
 - **🔇 Studio Spectral Noise Suppression**: Integrated Wiener DSP spectral subtraction filter that automatically analyzes and removes room fan noise, keyboard typing, and ambient hiss while keeping vocals crisp and natural.
 - **🎧 Explicit Hardware Microphone Selector**: Automatically detects and prioritizes wired USB microphones (e.g. EarPods / USB interfaces) over built-in laptop chassis mics, eliminating laptop resonance.
 - **🚀 Drag & Drop Anywhere**: Native AppKit `NSDraggingSource` and SwiftUI `.onDrag` support. Simply click and drag the recorded voice card directly into **Antigravity**, Slack, Telegram, Discord, VS Code, Finder, or any browser window!
