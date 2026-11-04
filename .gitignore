@@ -1,0 +1,52 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Xcode and Build Output
+*.app/
+*.dSYM/
+build/
+DerivedData/
+*.ipa
+*.pkg
+
+# Recordings (Private user audio)
+Recordings/*.wav
+Recordings/*.mp3
+Recordings/*.m4a
+!Recordings/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Temporary & Swap files
+*.swp
+*.swo
+*~
+*.tmp
+*.tmp.wav
