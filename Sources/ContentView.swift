@@ -80,7 +80,7 @@ struct ContentView: View {
                         Text("VoiceDrop")
                             .font(.system(size: 16, weight: .bold))
 
-                        Text("v1.4.0 • Сборка: 04.11.2026 13:20")
+                        Text("v1.5.0 • Сборка: 04.11.2026 13:45")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
@@ -186,15 +186,27 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Требуется разрешение на использование микрофона")
                             .font(.system(size: 12, weight: .semibold))
-                        Text("macOS блокирует микрофон. Разрешите его в Системных настройках.")
+                        Text("macOS блокирует микрофон. Нажмите кнопку справа для сброса и вызова окна.")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
+
+                    Button(action: {
+                        recorder.resetAndRequestMicPermission()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("Сбросить и запросить окно")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
                     Button("Настройки macOS") {
                         recorder.openSystemSettingsForMic()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
                 .padding(10)
@@ -231,7 +243,7 @@ struct ContentView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 240)
 
                 Button(action: {
                     deviceManager.refreshDevices()
@@ -241,6 +253,18 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Обновить список микрофонов")
+
+                Button(action: {
+                    recorder.resetAndRequestMicPermission()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.raised.slash")
+                        Text("Сброс доступа")
+                    }
+                    .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+                .help("Сбросить доступ к микрофону в macOS и заново вызвать всплывающее системное окно")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

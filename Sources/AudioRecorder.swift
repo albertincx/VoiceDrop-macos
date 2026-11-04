@@ -59,6 +59,26 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
     }
 
+    func resetAndRequestMicPermission() {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.voicedrop.app"
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        p.arguments = ["reset", "Microphone", bundleID]
+        try? p.run()
+        p.waitUntilExit()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.requestMicrophoneAccess { granted in
+                DispatchQueue.main.async {
+                    self.micPermissionGranted = granted
+                    if !granted {
+                        self.openSystemSettingsForMic()
+                    }
+                }
+            }
+        }
+    }
+
     func loadRecentRecordings() {
         do {
             let files = try FileManager.default.contentsOfDirectory(at: recordingsDirectory, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])
