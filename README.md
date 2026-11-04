@@ -9,6 +9,12 @@
 
 ---
 
+<p align="center">
+  <img src="Resources/comparison.jpg" alt="VoiceDrop: The Old Way vs The New Way" width="850">
+</p>
+
+---
+
 ## 🌟 Highlights
 
 - **🎙️ One-Click Voice Recording**: Modern macOS SwiftUI interface with dynamic waveform visualization and duration metering.
