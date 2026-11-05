@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 
 struct ContentView: View {
+    @ObservedObject private var loc = Localization.shared
     @StateObject private var recorder = AudioRecorder()
     @StateObject private var player = AudioPlayer()
     @StateObject private var transcriber = TranscriptionService()
@@ -80,10 +81,10 @@ struct ContentView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text("VoiceDrop")
+                        Text(loc.t(.appTitle))
                             .font(.system(size: 16, weight: .bold))
 
-                        Text("v1.6.0 • Сборка: 04.11.2026 14:00")
+                        Text("v1.7.0 • \(loc.t(.buildLabel)): 2026-11-05")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
@@ -92,7 +93,7 @@ struct ContentView: View {
                             .cornerRadius(4)
                     }
 
-                    Text("Запись с шумоподавлением, Drag&Drop и Whisper")
+                    Text(loc.t(.headerSubtitle))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -100,30 +101,39 @@ struct ContentView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
+                // UI Language Switcher
+                Picker("", selection: $loc.currentLanguage) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 175)
+
                 Button(action: {
                     recorder.selectExternalFile()
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: "plus.circle")
-                        Text("Выбрать файл...")
+                        Text(loc.t(.chooseFile))
                     }
                     .font(.system(size: 12))
                 }
                 .buttonStyle(.bordered)
-                .help("Выбрать любой аудиофайл (WAV, MP3, M4A) для воспроизведения или распознавания")
+                .help(loc.t(.chooseFileHelp))
 
                 Button(action: {
                     NSWorkspace.shared.open(recorder.recordingsDirectory)
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: "folder")
-                        Text("Папка записей")
+                        Text(loc.t(.recordingsFolder))
                     }
                     .font(.system(size: 12))
                 }
                 .buttonStyle(.bordered)
-                .help("Открыть папку с сохранёнными аудиозаписями в Finder")
+                .help(loc.t(.recordingsFolderHelp))
             }
         }
         .padding(.horizontal, 20)
@@ -141,31 +151,31 @@ struct ContentView: View {
                         .frame(width: 8, height: 8)
                         .shadow(color: recorder.noiseSuppressionEnabled ? Color.green.opacity(0.8) : Color.clear, radius: 4)
 
-                    Text("Студийное спектральное шумоподавление")
+                    Text(loc.t(.studioNoiseSuppression))
                         .font(.system(size: 13, weight: .semibold))
                 }
 
                 Spacer()
 
-                Text("Wiener DSP Filter (Удаление шипения и шума)")
+                Text(loc.t(.wienerFilterSubtitle))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
             }
 
             HStack(spacing: 16) {
-                Toggle("Авто-шумоподавление при записи", isOn: $recorder.noiseSuppressionEnabled)
+                Toggle(loc.t(.autoDenoiseToggle), isOn: $recorder.noiseSuppressionEnabled)
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
 
                 Spacer()
 
-                Picker("Сила очистки:", selection: $recorder.denoiseStrength) {
-                    Text("Мягкая (1.2)").tag(1.2)
-                    Text("Студийная (1.8)").tag(1.8)
-                    Text("Максимальная (2.5)").tag(2.5)
+                Picker(loc.t(.denoiseStrengthLabel), selection: $recorder.denoiseStrength) {
+                    Text(loc.t(.strengthMild)).tag(1.2)
+                    Text(loc.t(.strengthStudio)).tag(1.8)
+                    Text(loc.t(.strengthMaximum)).tag(2.5)
                 }
                 .pickerStyle(.menu)
-                .frame(width: 190)
+                .frame(width: 200)
             }
         }
         .padding(14)
@@ -187,9 +197,9 @@ struct ContentView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.yellow)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Требуется разрешение на использование микрофона")
+                        Text(loc.t(.micPermissionRequiredTitle))
                             .font(.system(size: 12, weight: .semibold))
-                        Text("macOS блокирует микрофон. Нажмите кнопку справа для сброса и вызова окна.")
+                        Text(loc.t(.micPermissionRequiredSubtitle))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -200,13 +210,13 @@ struct ContentView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("Сбросить и запросить окно")
+                            Text(loc.t(.resetAndRequestPrompt))
                         }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
 
-                    Button("Настройки macOS") {
+                    Button(loc.t(.macOSSettings)) {
                         recorder.openSystemSettingsForMic()
                     }
                     .buttonStyle(.bordered)
@@ -232,7 +242,7 @@ struct ContentView: View {
                     .foregroundColor(.blue)
                     .font(.system(size: 13))
 
-                Text("Микрофон:")
+                Text(loc.t(.micLabel))
                     .font(.system(size: 12, weight: .semibold))
 
                 Spacer()
@@ -242,11 +252,11 @@ struct ContentView: View {
                     set: { newID in deviceManager.selectDevice(id: newID) }
                 )) {
                     ForEach(deviceManager.availableDevices) { dev in
-                        Text(dev.displayName).tag(dev.id)
+                        Text(dev.localizedDisplayName(for: loc.currentLanguage)).tag(dev.id)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 240)
+                .frame(maxWidth: 260)
 
                 Button(action: {
                     deviceManager.refreshDevices()
@@ -255,19 +265,19 @@ struct ContentView: View {
                         .font(.system(size: 12))
                 }
                 .buttonStyle(.plain)
-                .help("Обновить список микрофонов")
+                .help(loc.t(.refreshMicsHelp))
 
                 Button(action: {
                     recorder.resetAndRequestMicPermission()
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "hand.raised.slash")
-                        Text("Сброс доступа")
+                        Text(loc.t(.resetMicAccessButton))
                     }
                     .font(.system(size: 11))
                 }
                 .buttonStyle(.bordered)
-                .help("Сбросить доступ к микрофону в macOS и заново вызвать всплывающее системное окно")
+                .help(loc.t(.resetMicAccessHelp))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -303,7 +313,7 @@ struct ContentView: View {
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(.white)
 
-                            Text(recorder.isRecording ? "Стоп" : "Запись")
+                            Text(recorder.isRecording ? loc.t(.stopButton) : loc.t(.recordButton))
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
                         }
@@ -320,19 +330,19 @@ struct ContentView: View {
             // Waveform visualizer
             WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording)
 
-            Text(recorder.isRecording ? "Говорите в микрофон. Шумоподавление активно." : "Нажмите кнопку или пробел для начала записи")
+            Text(recorder.isRecording ? loc.t(.recordingActiveHint) : loc.t(.recordingIdleHint))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
             // Spacebar shortcut hint
             HStack(spacing: 6) {
-                Text("␣ Пробел")
+                Text(loc.t(.spaceKey))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color(NSColor.controlColor))
                     .cornerRadius(4)
-                Text(recorder.isRecording ? "— нажать, чтобы остановить запись" : "— нажать, чтобы начать запись")
+                Text(recorder.isRecording ? loc.t(.spacebarHintRecording) : loc.t(.spacebarHintIdle))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
             }
@@ -353,12 +363,12 @@ struct ContentView: View {
     private func dragAndDropSection(fileURL: URL) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Сохранённая аудиозапись (Готова к Drag & Drop)", systemImage: "arrow.down.doc")
+                Label(loc.t(.savedAudioTitle), systemImage: "arrow.down.doc")
                     .font(.system(size: 14, weight: .semibold))
 
                 Spacer()
 
-                Text("WAV 16kHz Mono (Lossless)")
+                Text(loc.t(.losslessWavTag))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
             }
@@ -383,10 +393,10 @@ struct ContentView: View {
                         if recorder.isDenoising {
                             ProgressView()
                                 .controlSize(.small)
-                            Text("Удаление шума...")
+                            Text(loc.t(.denoisingProgress))
                         } else {
                             Image(systemName: "sparkles")
-                            Text(recorder.isDenoised ? "Шумоподавление применено ✓" : "Очистить от шума")
+                            Text(recorder.isDenoised ? loc.t(.denoiseApplied) : loc.t(.denoiseButton))
                         }
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -402,11 +412,11 @@ struct ContentView: View {
                         if recorder.isConvertingMP3 {
                             ProgressView()
                                 .controlSize(.small)
-                            Text("Конвертация в MP3...")
+                            Text(loc.t(.convertingMP3))
                         } else {
                             Image(systemName: recorder.copiedMP3Feedback ? "checkmark.circle.fill" : "music.note")
                                 .foregroundColor(recorder.copiedMP3Feedback ? .green : .orange)
-                            Text(recorder.copiedMP3Feedback ? "MP3 скопирован в буфер!" : "Скопировать как MP3")
+                            Text(recorder.copiedMP3Feedback ? loc.t(.copiedMP3Done) : loc.t(.copyAsMP3Button))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(recorder.copiedMP3Feedback ? .green : .primary)
                         }
@@ -414,12 +424,12 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(recorder.isConvertingMP3)
-                .help("Скопировать запись как MP3 файл в буфер обмена для вставки в Telegram, Slack или Antigravity")
+                .help(loc.t(.copyMP3Help))
 
                 Spacer()
 
                 if recorder.isDenoised {
-                    Text("Чистый голос")
+                    Text(loc.t(.cleanVoiceTag))
                         .font(.system(size: 11))
                         .foregroundColor(.green)
                 }
@@ -466,7 +476,7 @@ struct ContentView: View {
                         .font(.system(size: 13))
                 }
                 .buttonStyle(.plain)
-                .help("Перезагрузить аудиофайл")
+                .help(loc.t(.reloadAudioHelp))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -488,26 +498,26 @@ struct ContentView: View {
     private var transcriptionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("Распознавание текста (Локальная модель)", systemImage: "sparkles")
+                Label(loc.t(.localSpeechRecognitionTitle), systemImage: "sparkles")
                     .font(.system(size: 14, weight: .semibold))
 
                 Spacer()
 
-                // Language picker
-                Picker("Язык:", selection: $transcriber.selectedLanguage) {
-                    ForEach(Array(transcriber.availableLanguages.keys.sorted()), id: \.self) { key in
-                        Text(transcriber.availableLanguages[key] ?? key).tag(key)
+                // Spoken Language picker
+                Picker(loc.t(.speechLanguageLabel), selection: $transcriber.selectedLanguage) {
+                    ForEach(transcriber.languageKeys, id: \.self) { key in
+                        Text(transcriber.languageDisplayName(for: key, lang: loc.currentLanguage)).tag(key)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(width: 170)
+                .frame(width: 220)
             }
 
             // Model selector & Transcribe Button
             HStack(spacing: 12) {
-                Picker("Модель:", selection: $transcriber.selectedModel) {
-                    ForEach(Array(transcriber.availableModels.keys.sorted()), id: \.self) { key in
-                        Text(transcriber.availableModels[key] ?? key).tag(key)
+                Picker(loc.t(.modelLabel), selection: $transcriber.selectedModel) {
+                    ForEach(transcriber.modelKeys, id: \.self) { key in
+                        Text(transcriber.modelDisplayName(for: key, lang: loc.currentLanguage)).tag(key)
                     }
                 }
                 .pickerStyle(.menu)
@@ -522,10 +532,10 @@ struct ContentView: View {
                             if transcriber.isTranscribing {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Распознавание...")
+                                Text(loc.t(.transcribingProgress))
                             } else {
                                 Image(systemName: "waveform.and.magnifyingglass")
-                                Text("Распознать текст")
+                                Text(loc.t(.transcribeButton))
                             }
                         }
                         .font(.system(size: 13, weight: .semibold))
@@ -556,7 +566,7 @@ struct ContentView: View {
             // Transcription Text Area
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Результат распознавания:")
+                    Text(loc.t(.transcriptionResultLabel))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
 
@@ -569,7 +579,7 @@ struct ContentView: View {
                         HStack(spacing: 5) {
                             Image(systemName: transcriber.copiedFeedback ? "checkmark" : "doc.on.doc")
                                 .foregroundColor(transcriber.copiedFeedback ? .green : .primary)
-                            Text(transcriber.copiedFeedback ? "Скопировано!" : "Копировать")
+                            Text(transcriber.copiedFeedback ? loc.t(.copiedTextDone) : loc.t(.copyTextButton))
                                 .fontWeight(transcriber.copiedFeedback ? .bold : .regular)
                                 .foregroundColor(transcriber.copiedFeedback ? .green : .primary)
                         }
@@ -581,7 +591,7 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(transcriber.transcribedText.isEmpty)
-                    .help("Скопировать распознанный текст в буфер обмена")
+                    .help(loc.t(.copyTextButton))
                 }
 
                 TextEditor(text: $transcriber.transcribedText)
@@ -610,7 +620,7 @@ struct ContentView: View {
     // MARK: - History Section
     private var recentHistorySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Недавние записи:")
+            Text(loc.t(.recentRecordingsTitle))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
@@ -629,7 +639,7 @@ struct ContentView: View {
                         recorder.currentRecordingURL = fileURL
                         player.loadAudio(url: fileURL)
                     }) {
-                        Text("Выбрать")
+                        Text(loc.t(.selectRecordingButton))
                             .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)

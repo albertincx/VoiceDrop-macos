@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 struct DraggableAudioCard: View {
+    @ObservedObject private var loc = Localization.shared
     let fileURL: URL
     var mp3URL: URL? = nil
     let onCopyPath: () -> Void
@@ -53,7 +54,7 @@ struct DraggableAudioCard: View {
                         .font(.system(size: 11))
                         .foregroundColor(.accentColor)
 
-                    Text("Потяните отсюда мышкой в Antigravity или Finder")
+                    Text(loc.t(.dragHint))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.accentColor)
                 }
@@ -78,7 +79,7 @@ struct DraggableAudioCard: View {
                         HStack(spacing: 3) {
                             Image(systemName: showCopiedMP3Badge ? "checkmark.circle.fill" : "music.note")
                                 .foregroundColor(showCopiedMP3Badge ? .green : .orange)
-                            Text(showCopiedMP3Badge ? "Скопирован!" : "MP3")
+                            Text(showCopiedMP3Badge ? loc.t(.copiedBadge) : "MP3")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(showCopiedMP3Badge ? .green : .orange)
                         }
@@ -88,7 +89,7 @@ struct DraggableAudioCard: View {
                         .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
-                    .help("Скопировать запись как MP3 в буфер обмена")
+                    .help(loc.t(.copyMP3Help))
                 }
 
                 Button(action: {
@@ -99,7 +100,7 @@ struct DraggableAudioCard: View {
                         .foregroundColor(showCopiedBadge ? .green : .primary)
                 }
                 .buttonStyle(.plain)
-                .help("Скопировать WAV в буфер обмена (Cmd+C)")
+                .help(loc.t(.copyWavHelp))
 
                 Button(action: {
                     NSWorkspace.shared.activateFileViewerSelecting([fileURL])
@@ -108,7 +109,7 @@ struct DraggableAudioCard: View {
                         .font(.system(size: 13, weight: .medium))
                 }
                 .buttonStyle(.plain)
-                .help("Показать в Finder")
+                .help(loc.t(.showInFinderHelp))
             }
         }
         .padding(12)

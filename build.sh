@@ -37,6 +37,7 @@ fi
 
 # Compile Swift sources
 SWIFT_FILES=(
+    Sources/Localization.swift
     Sources/AudioDeviceManager.swift
     Sources/AudioRecorder.swift
     Sources/AudioPlayer.swift

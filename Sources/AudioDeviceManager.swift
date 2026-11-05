@@ -2,15 +2,39 @@ import Foundation
 import CoreAudio
 import Combine
 
+enum DeviceTransportType {
+    case usb
+    case builtIn
+    case bluetooth
+    case other
+
+    func localized(for lang: AppLanguage) -> String {
+        switch self {
+        case .usb:
+            return lang == .en ? "Wired USB" : "Проводной USB"
+        case .builtIn:
+            return lang == .en ? "Built-in" : "Встроенный"
+        case .bluetooth:
+            return "Bluetooth"
+        case .other:
+            return lang == .en ? "Audio Device" : "Аудиоустройство"
+        }
+    }
+}
+
 struct AudioInputDevice: Identifiable, Hashable {
     let id: AudioDeviceID
     let name: String
     let isWired: Bool
-    let transportString: String
+    let transportType: DeviceTransportType
+
+    func localizedDisplayName(for lang: AppLanguage) -> String {
+        let icon = isWired ? "🎧" : (transportType == .bluetooth ? "📶" : "💻")
+        return "\(icon) \(name) (\(transportType.localized(for: lang)))"
+    }
 
     var displayName: String {
-        let icon = isWired ? "🎧" : (transportString.contains("Bluetooth") ? "📶" : "💻")
-        return "\(icon) \(name) (\(transportString))"
+        return localizedDisplayName(for: Localization.shared.currentLanguage)
     }
 }
 
@@ -78,12 +102,13 @@ class AudioDeviceManager: ObservableObject {
             let isBuiltIn = (transport == 1651274862) // 'bltn'
             let isBluetooth = (transport == 1651808629) // 'blue'
 
-            var transportStr = "Аудиоустройство"
-            if isUsb { transportStr = "Проводной USB" }
-            else if isBuiltIn { transportStr = "Встроенный" }
-            else if isBluetooth { transportStr = "Bluetooth" }
+            let transportType: DeviceTransportType
+            if isUsb { transportType = .usb }
+            else if isBuiltIn { transportType = .builtIn }
+            else if isBluetooth { transportType = .bluetooth }
+            else { transportType = .other }
 
-            devices.append(AudioInputDevice(id: id, name: name, isWired: isUsb, transportString: transportStr))
+            devices.append(AudioInputDevice(id: id, name: name, isWired: isUsb, transportType: transportType))
         }
 
         // Current default input

@@ -6,25 +6,44 @@ class TranscriptionService: ObservableObject {
     @Published var isTranscribing: Bool = false
     @Published var transcribedText: String = ""
     @Published var detectedLanguage: String = ""
-    @Published var statusMessage: String = "Готов к распознаванию"
+    @Published var statusMessage: String = Localization.shared.t(.statusReadyToTranscribe)
     @Published var errorMessage: String?
     @Published var copiedFeedback: Bool = false
     @Published var selectedModel: String = "large-v3-turbo"
     @Published var selectedLanguage: String = "auto"
 
-    let availableModels = [
-        "large-v3-turbo": "Whisper large-v3-turbo (Сохраненная локальная модель)",
-        "tiny": "Whisper tiny (Быстрая легковесная модель)"
-    ]
+    let modelKeys = ["large-v3-turbo", "tiny"]
+    let languageKeys = ["auto", "en", "ru", "de", "es", "fr"]
 
-    let availableLanguages = [
-        "auto": "Автоопределение",
-        "ru": "Русский (RU)",
-        "en": "English (EN)",
-        "de": "Deutsch",
-        "es": "Español",
-        "fr": "Français"
-    ]
+    func modelDisplayName(for key: String, lang: AppLanguage = Localization.shared.currentLanguage) -> String {
+        switch key {
+        case "large-v3-turbo":
+            return lang == .en ? "Whisper large-v3-turbo (Local Saved Model)" : "Whisper large-v3-turbo (Сохраненная локальная модель)"
+        case "tiny":
+            return lang == .en ? "Whisper tiny (Fast & Lightweight)" : "Whisper tiny (Быстрая легковесная модель)"
+        default:
+            return key
+        }
+    }
+
+    func languageDisplayName(for key: String, lang: AppLanguage = Localization.shared.currentLanguage) -> String {
+        switch key {
+        case "auto":
+            return lang == .en ? "Auto-detect" : "Автоопределение"
+        case "ru":
+            return lang == .en ? "Russian (RU)" : "Русский (RU)"
+        case "en":
+            return lang == .en ? "English (EN)" : "English (EN)"
+        case "de":
+            return "Deutsch"
+        case "es":
+            return "Español"
+        case "fr":
+            return "Français"
+        default:
+            return key
+        }
+    }
 
     private var currentProcess: Process?
 
@@ -65,24 +84,27 @@ class TranscriptionService: ObservableObject {
     func transcribe(fileURL: URL) {
         guard !isTranscribing else { return }
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            self.errorMessage = "Файл аудио не найден: \(fileURL.lastPathComponent)"
+            let isEn = Localization.shared.currentLanguage == .en
+            self.errorMessage = isEn ? "Audio file not found: \(fileURL.lastPathComponent)" : "Файл аудио не найден: \(fileURL.lastPathComponent)"
             return
         }
 
         guard let pythonPath = findPythonExecutable() else {
-            self.errorMessage = "Не найден Python с faster-whisper."
+            let isEn = Localization.shared.currentLanguage == .en
+            self.errorMessage = isEn ? "Python with faster-whisper not found." : "Не найден Python с faster-whisper."
             return
         }
 
         guard let scriptPath = findTranscribeScript() else {
-            self.errorMessage = "Скрипт распознавания transcribe.py не найден."
+            let isEn = Localization.shared.currentLanguage == .en
+            self.errorMessage = isEn ? "transcribe.py script not found." : "Скрипт распознавания transcribe.py не найден."
             return
         }
 
         DispatchQueue.main.async {
             self.isTranscribing = true
             self.errorMessage = nil
-            self.statusMessage = "Загрузка локальной модели Whisper (\(self.selectedModel))..."
+            self.statusMessage = Localization.shared.t(.statusLoadingModel(self.selectedModel))
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -109,7 +131,7 @@ class TranscriptionService: ObservableObject {
             do {
                 try process.run()
                 DispatchQueue.main.async {
-                    self.statusMessage = "Распознавание речи локальной нейросетью..."
+                    self.statusMessage = Localization.shared.t(.statusTranscribing)
                 }
 
                 let data = outPipe.fileHandleForReading.readDataToEndOfFile()
@@ -134,7 +156,7 @@ class TranscriptionService: ObservableObject {
                         DispatchQueue.main.async {
                             self.isTranscribing = false
                             self.errorMessage = error
-                            self.statusMessage = "Ошибка распознавания"
+                            self.statusMessage = Localization.shared.currentLanguage == .en ? "Transcription error" : "Ошибка распознавания"
                         }
                         return
                     }
@@ -146,26 +168,28 @@ class TranscriptionService: ObservableObject {
                         self.isTranscribing = false
                         self.transcribedText = text
                         self.detectedLanguage = lang
-                        self.statusMessage = "Успешно распознано (\(lang.uppercased()))"
+                        self.statusMessage = Localization.shared.t(.statusSuccess(lang))
                     }
                 } else if !rawOutput.isEmpty {
                     DispatchQueue.main.async {
                         self.isTranscribing = false
                         self.transcribedText = rawOutput
-                        self.statusMessage = "Распознавание завершено"
+                        self.statusMessage = Localization.shared.t(.statusCompleted)
                     }
                 } else {
                     DispatchQueue.main.async {
                         self.isTranscribing = false
-                        self.errorMessage = "Модель не вернула текст (пустой вывод)"
-                        self.statusMessage = "Пустой результат"
+                        let isEn = Localization.shared.currentLanguage == .en
+                        self.errorMessage = isEn ? "Model returned empty text" : "Модель не вернула текст (пустой вывод)"
+                        self.statusMessage = isEn ? "Empty result" : "Пустой результат"
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.isTranscribing = false
-                    self.errorMessage = "Сбой запуска процесса: \(error.localizedDescription)"
-                    self.statusMessage = "Ошибка"
+                    let isEn = Localization.shared.currentLanguage == .en
+                    self.errorMessage = isEn ? "Process execution failed: \(error.localizedDescription)" : "Сбой запуска процесса: \(error.localizedDescription)"
+                    self.statusMessage = isEn ? "Error" : "Ошибка"
                 }
             }
         }
@@ -176,7 +200,7 @@ class TranscriptionService: ObservableObject {
         currentProcess = nil
         DispatchQueue.main.async {
             self.isTranscribing = false
-            self.statusMessage = "Распознавание отменено"
+            self.statusMessage = Localization.shared.t(.statusCancelled)
         }
     }
 
