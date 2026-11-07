@@ -82,6 +82,10 @@ class Localization: ObservableObject {
         case denoisingProgress
         case copyAsMP3Button
         case copiedMP3Done
+        case copyWavButton
+        case copiedWAVDone
+        case copiedMP3Badge
+        case copiedWAVBadge
         case convertingMP3
         case cleanVoiceTag
         case reloadAudioHelp
@@ -225,12 +229,12 @@ class Localization: ObservableObject {
                     : "Потяните отсюда мышкой в Antigravity или Finder"
             case .copyWavHelp:
                 return lang == .en
-                    ? "Copy WAV audio file to clipboard (Cmd+C)"
-                    : "Скопировать WAV в буфер обмена (Cmd+C)"
+                    ? "Copy original WAV file (Lossless) to clipboard"
+                    : "Скопировать оригинальный WAV файл (Lossless) в буфер обмена"
             case .copyMP3Help:
                 return lang == .en
-                    ? "Copy MP3 audio file to clipboard"
-                    : "Скопировать MP3 в буфер обмена"
+                    ? "Copy recording as MP3 (default) to clipboard"
+                    : "Скопировать запись как MP3 (по умолчанию) в буфер обмена"
             case .showInFinderHelp:
                 return lang == .en ? "Reveal in Finder" : "Показать в Finder"
             case .denoiseButton:
@@ -240,9 +244,17 @@ class Localization: ObservableObject {
             case .denoisingProgress:
                 return lang == .en ? "Removing noise..." : "Удаление шума..."
             case .copyAsMP3Button:
-                return lang == .en ? "Copy as MP3" : "Скопировать как MP3"
+                return lang == .en ? "Copy (MP3)" : "Скопировать (MP3)"
             case .copiedMP3Done:
                 return lang == .en ? "MP3 copied to clipboard!" : "MP3 скопирован в буфер!"
+            case .copyWavButton:
+                return lang == .en ? "Copy WAV" : "Скопировать WAV"
+            case .copiedWAVDone:
+                return lang == .en ? "WAV copied to clipboard!" : "WAV скопирован в буфер!"
+            case .copiedMP3Badge:
+                return lang == .en ? "Copied MP3!" : "Скопирован MP3!"
+            case .copiedWAVBadge:
+                return lang == .en ? "Copied WAV!" : "Скопирован WAV!"
             case .convertingMP3:
                 return lang == .en ? "Converting to MP3..." : "Конвертация в MP3..."
             case .cleanVoiceTag:

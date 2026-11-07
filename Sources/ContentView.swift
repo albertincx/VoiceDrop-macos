@@ -380,9 +380,11 @@ struct ContentView: View {
                 pasteboard.setString(fileURL.path, forType: .string)
             }, onCopyMP3: {
                 recorder.copyMP3ToClipboard()
+            }, onCopyWAV: {
+                recorder.copyWAVToClipboard()
             })
 
-            // Actions Bar: Denoise & Copy MP3
+            // Actions Bar: Denoise, Default Copy (MP3) & Separate Copy WAV
             HStack(spacing: 10) {
                 Button(action: {
                     recorder.applyDenoise(fileURL: fileURL, strength: recorder.denoiseStrength) { cleanURL in
@@ -405,6 +407,7 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(recorder.isDenoising)
 
+                // Default Copy Button (MP3)
                 Button(action: {
                     recorder.copyMP3ToClipboard()
                 }) {
@@ -425,6 +428,21 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(recorder.isConvertingMP3)
                 .help(loc.t(.copyMP3Help))
+
+                // Separate Button for WAV
+                Button(action: {
+                    recorder.copyWAVToClipboard()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: recorder.copiedWAVFeedback ? "checkmark.circle.fill" : "waveform")
+                            .foregroundColor(recorder.copiedWAVFeedback ? .green : .blue)
+                        Text(recorder.copiedWAVFeedback ? loc.t(.copiedWAVDone) : loc.t(.copyWavButton))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(recorder.copiedWAVFeedback ? .green : .primary)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .help(loc.t(.copyWavHelp))
 
                 Spacer()
 

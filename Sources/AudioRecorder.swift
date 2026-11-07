@@ -8,6 +8,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isDenoising: Bool = false
     @Published var isConvertingMP3: Bool = false
     @Published var copiedMP3Feedback: Bool = false
+    @Published var copiedWAVFeedback: Bool = false
     @Published var recordingDuration: TimeInterval = 0.0
     @Published var currentAudioLevel: Float = 0.0
     @Published var audioWaveform: [Float] = Array(repeating: 0.1, count: 24)
@@ -397,6 +398,28 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.copiedMP3Feedback = false
         }
+    }
+
+    func copyWAVToClipboard() {
+        guard let url = currentRecordingURL else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([url as NSURL])
+        triggerCopiedWAVFeedback()
+    }
+
+    private func triggerCopiedWAVFeedback() {
+        DispatchQueue.main.async {
+            self.copiedWAVFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.copiedWAVFeedback = false
+        }
+    }
+
+    func copyDefaultAudioToClipboard() {
+        // Default audio copy format is MP3 as requested
+        copyMP3ToClipboard()
     }
 
     func selectExternalFile() {

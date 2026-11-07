@@ -7,10 +7,26 @@ struct DraggableAudioCard: View {
     var mp3URL: URL? = nil
     let onCopyPath: () -> Void
     var onCopyMP3: (() -> Void)? = nil
+    var onCopyWAV: (() -> Void)? = nil
 
     @State private var isHovering: Bool = false
-    @State private var showCopiedBadge: Bool = false
+    @State private var showCopiedWAVBadge: Bool = false
     @State private var showCopiedMP3Badge: Bool = false
+
+    var resolvedMP3URL: URL? {
+        if let mp3 = mp3URL, FileManager.default.fileExists(atPath: mp3.path) {
+            return mp3
+        }
+        let candidate = fileURL.deletingPathExtension().appendingPathExtension("mp3")
+        if FileManager.default.fileExists(atPath: candidate.path) {
+            return candidate
+        }
+        return nil
+    }
+
+    var effectiveDragURL: URL {
+        return resolvedMP3URL ?? fileURL
+    }
 
     var fileSizeString: String {
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
@@ -62,46 +78,71 @@ struct DraggableAudioCard: View {
 
             Spacer()
 
-            // Quick Actions: Copy MP3, Copy WAV File & Reveal in Finder
+            // Quick Actions: Default Copy (MP3), Separate Copy WAV & Reveal in Finder
             HStack(spacing: 8) {
-                if let onCopyMP3 = onCopyMP3 {
-                    Button(action: {
-                        onCopyMP3()
-                        withAnimation {
-                            showCopiedMP3Badge = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            withAnimation {
-                                showCopiedMP3Badge = false
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: showCopiedMP3Badge ? "checkmark.circle.fill" : "music.note")
-                                .foregroundColor(showCopiedMP3Badge ? .green : .orange)
-                            Text(showCopiedMP3Badge ? loc.t(.copiedBadge) : "MP3")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(showCopiedMP3Badge ? .green : .orange)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.orange.opacity(0.12))
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .help(loc.t(.copyMP3Help))
-                }
-
+                // Default Copy Button: Copies MP3 format
                 Button(action: {
-                    copyFileToClipboard()
+                    if let onCopyMP3 = onCopyMP3 {
+                        onCopyMP3()
+                    } else {
+                        copyMP3ToClipboard()
+                    }
+                    withAnimation {
+                        showCopiedMP3Badge = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation {
+                            showCopiedMP3Badge = false
+                        }
+                    }
                 }) {
-                    Image(systemName: showCopiedBadge ? "checkmark.circle.fill" : "doc.on.doc")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(showCopiedBadge ? .green : .primary)
+                    HStack(spacing: 4) {
+                        Image(systemName: showCopiedMP3Badge ? "checkmark.circle.fill" : "doc.on.doc")
+                            .foregroundColor(showCopiedMP3Badge ? .green : .orange)
+                        Text(showCopiedMP3Badge ? loc.t(.copiedMP3Badge) : "MP3")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(showCopiedMP3Badge ? .green : .orange)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.14))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help(loc.t(.copyMP3Help))
+
+                // Separate Button for WAV format
+                Button(action: {
+                    if let onCopyWAV = onCopyWAV {
+                        onCopyWAV()
+                    } else {
+                        copyWAVToClipboard()
+                    }
+                    withAnimation {
+                        showCopiedWAVBadge = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation {
+                            showCopiedWAVBadge = false
+                        }
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showCopiedWAVBadge ? "checkmark.circle.fill" : "waveform")
+                            .foregroundColor(showCopiedWAVBadge ? .green : .blue)
+                        Text(showCopiedWAVBadge ? loc.t(.copiedWAVBadge) : "WAV")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(showCopiedWAVBadge ? .green : .blue)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.12))
+                    .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
                 .help(loc.t(.copyWavHelp))
 
+                // Reveal in Finder
                 Button(action: {
                     NSWorkspace.shared.activateFileViewerSelecting([fileURL])
                 }) {
@@ -123,13 +164,13 @@ struct DraggableAudioCard: View {
         )
         .overlay(
             // Underlying native AppKit drag provider for rock-solid Drag & Drop to Electron (Antigravity)
-            NativeDraggableViewRepresentable(fileURL: fileURL)
+            NativeDraggableViewRepresentable(fileURL: effectiveDragURL)
                 .opacity(0.01)
         )
         // SwiftUI standard drag as secondary layer
         .onDrag {
-            let provider = NSItemProvider(object: fileURL as NSURL)
-            provider.suggestedName = fileURL.lastPathComponent
+            let provider = NSItemProvider(object: effectiveDragURL as NSURL)
+            provider.suggestedName = effectiveDragURL.lastPathComponent
             return provider
         }
         .onHover { hover in
@@ -139,17 +180,19 @@ struct DraggableAudioCard: View {
         }
     }
 
-    private func copyFileToClipboard() {
+    private func copyWAVToClipboard() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects([fileURL as NSURL])
-        withAnimation {
-            showCopiedBadge = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation {
-                showCopiedBadge = false
-            }
+    }
+
+    private func copyMP3ToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        if let mp3 = resolvedMP3URL {
+            pasteboard.writeObjects([mp3 as NSURL])
+        } else {
+            pasteboard.writeObjects([fileURL as NSURL])
         }
     }
 }
