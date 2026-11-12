@@ -1,0 +1,70 @@
+name: Build VoiceDrop
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version tag (e.g. v1.4.0)'
+        required: false
+        default: ''
+
+jobs:
+  build-macos:
+    name: Build macOS Application
+    runs-on: macos-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve Version Name
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version_tag }}" ]; then
+            VER="${{ github.event.inputs.version_tag }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VER="${GITHUB_REF#refs/tags/}"
+          else
+            PLIST_VER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
+            SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "latest")
+            VER="v${PLIST_VER}-${SHORT_SHA}"
+          fi
+          echo "APP_VERSION=${VER}" >> $GITHUB_ENV
+          echo "Resolved version: ${VER}"
+
+      - name: Build macOS Application
+        run: bash ./build.sh
+
+      - name: Package Application Archive with Version Name
+        run: |
+          DIST_ZIP="voicedrop-${APP_VERSION}-macos.zip"
+          ditto -c -k --keepParent VoiceDrop.app "${DIST_ZIP}"
+
+          echo "DIST_ZIP=${DIST_ZIP}" >> $GITHUB_ENV
+          ls -la "${DIST_ZIP}"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voicedrop-${{ env.APP_VERSION }}-macos
+          path: ${{ env.DIST_ZIP }}
+
+      - name: Publish GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.APP_VERSION }}
+          name: VoiceDrop ${{ env.APP_VERSION }}
+          files: ${{ env.DIST_ZIP }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
