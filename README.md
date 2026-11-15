@@ -13,6 +13,10 @@
   <img src="Resources/comparison.jpg" alt="VoiceDrop: The Old Way vs The New Way" width="850">
 </p>
 
+<p align="center">
+  <img src="Resources/screenshot.jpg" alt="VoiceDrop Screenshot" width="600">
+</p>
+
 ---
 
 ## 🌟 Highlights
