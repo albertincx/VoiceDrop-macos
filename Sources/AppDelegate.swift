@@ -8,16 +8,51 @@ extension Notification.Name {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
+    private var keyMonitor: Any?
+    private var mouseMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Resign NSTextView focus when clicking outside of it so Spacebar shortcut keeps working
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            if let win = event.window,
+               let textView = win.firstResponder as? NSTextView,
+               let contentView = win.contentView {
+                let locationInContent = contentView.convert(event.locationInWindow, from: nil)
+                if let hitView = contentView.hitTest(locationInContent),
+                   !hitView.isDescendant(of: textView) {
+                    win.makeFirstResponder(nil)
+                }
+            }
+            return event
+        }
+
         // Spacebar shortcut monitor (Space = KeyCode 49)
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Escape exits text editing so Spacebar shortcut works again
+            if event.keyCode == 53,
+               let win = NSApp.keyWindow,
+               win.firstResponder is NSTextView {
+                win.makeFirstResponder(nil)
+                return nil
+            }
+
             if event.keyCode == 49 {
+                // Allow system shortcuts like Cmd+Space, Ctrl+Space, Option+Space
+                if !event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
+                    return event
+                }
+
                 // If user is actively typing in a text field or text editor, let Space work normally
                 if let responder = NSApp.keyWindow?.firstResponder as? NSTextView,
                    responder.isSelectable && responder.isEditable {
                     return event
                 }
+
+                // Ignore key repeat so holding Spacebar doesn't rapidly start and stop recording
+                if event.isARepeat {
+                    return nil
+                }
+
                 NotificationCenter.default.post(name: .toggleRecordingShortcut, object: nil)
                 return nil
             }
