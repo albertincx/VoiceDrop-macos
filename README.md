@@ -1,10 +1,12 @@
 # VoiceDrop 🎙️✨
 
-> **macOS Native AI Voice Studio** with Studio-Grade Spectral Noise Suppression, Instant Drag & Drop into Any App (including Antigravity, Telegram, and Finder), and 100% Offline Speech-to-Text via Local Whisper.
+> **Native AI Voice Studio for macOS & Android** with Studio-Grade Audio Recording, Instant Drag & Drop / One-Tap Clipboard Copying into Any App, and 100% Offline Speech-to-Text via Local Whisper & Vosk.
 
-[![Platform](https://img.shields.io/badge/Platform-macOS%2014%2B-blue.svg)](https://apple.com/macos)
+[![Platform macOS](https://img.shields.io/badge/macOS-14%2B-blue.svg)](https://apple.com/macos)
+[![Platform Android](https://img.shields.io/badge/Android-7.0%2B-green.svg)](android/)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Whisper](https://img.shields.io/badge/AI-Faster--Whisper%20(Offline)-purple.svg)](https://github.com/SYSTRAN/faster-whisper)
+[![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-purple.svg)](android/)
+[![AI Offline](https://img.shields.io/badge/AI-Whisper%20%7C%20Vosk%20(Offline)-purple.svg)](android/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
@@ -152,6 +154,26 @@ On first launch, macOS will request microphone access:
 
 ---
 
+## 📱 VoiceDrop for Android
+
+VoiceDrop is now also available as a modern native Android application built with **Kotlin** and **Jetpack Compose**:
+- **MP3 & Lossless WAV Recording**: Real-time microphone capture with instant LAME MP3 encoding and raw WAV.
+- **One-Tap Clipboard Copying**: Copies the audio file directly to your system clipboard (`content://` URI) so you can tap `Paste` in web chats, Telegram, Discord, and messaging apps.
+- **Dual Speech-to-Text Recognition**:
+  - **Vosk AI (100% Local Offline)**: Embedded Kaldi neural acoustic model (`vosk-model-small-ru-0.22`) running directly on the device CPU/NPU with zero internet access.
+  - **Google Cloud Speech**: Optional cloud recognition toggle for maximum dictionary vocabulary.
+- **Bilingual Interface**: One-touch language switcher `[ 🇺🇸 EN | 🇷🇺 RU ]` (English default, Russian supported).
+
+### Building Android App:
+```bash
+cd android
+./gradlew assembleRelease
+# APK is generated at: android/app/build/outputs/apk/release/app-release.apk
+```
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+

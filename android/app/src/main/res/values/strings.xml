@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">VoiceDrop</string>
+    <string name="app_subtitle">High-Quality MP3 &amp; WAV Voice Studio</string>
+    <string name="version_tag">v1.2.0</string>
+    
+    <!-- Top Bar -->
+    <string name="recordings_history">Recordings History</string>
+    <string name="minimize_app">Minimize App</string>
+    <string name="language_toggle">Language: English</string>
+    
+    <!-- Permissions -->
+    <string name="permission_title">Microphone Permission Required</string>
+    <string name="permission_desc">VoiceDrop needs microphone access to record high-quality audio.</string>
+    <string name="permission_allow">Allow</string>
+    
+    <!-- Audio Input -->
+    <string name="audio_input_source">Audio Input Source</string>
+    <string name="mic_default">Standard Microphone</string>
+    <string name="mic_voice_recognition">Voice Recognition (Clean)</string>
+    <string name="mic_camcorder">Camcorder Mic</string>
+    <string name="mic_unprocessed">Raw Unprocessed Audio</string>
+    
+    <!-- Recording Center -->
+    <string name="status_studio_ready">STUDIO READY</string>
+    <string name="status_recording">RECORDING MP3 + WAV</string>
+    <string name="tap_to_record">Tap to Record Voice</string>
+    <string name="tap_to_stop">Tap to Stop &amp; Encode MP3</string>
+    
+    <!-- Recording Card -->
+    <string name="latest_recording">LATEST RECORDING</string>
+    <string name="copy_mp3">Copy MP3</string>
+    <string name="copy_wav">Copy WAV</string>
+    <string name="copied">Copied!</string>
+    <string name="share">Share</string>
+    <string name="share_mp3">Share MP3</string>
+    <string name="share_wav">Share Lossless WAV</string>
+    <string name="save_downloads">Save to Downloads</string>
+    <string name="paste_hint">💡 Paste directly into chat via clipboard</string>
+    <string name="copy_minimize">Copy &amp; Minimize</string>
+    
+    <!-- Speech Recognition (STT) -->
+    <string name="stt_section_header">SPEECH-TO-TEXT (OFFLINE AI)</string>
+    <string name="stt_title">Local Speech-to-Text</string>
+    <string name="stt_subtitle">On-Device Neural Recognition</string>
+    <string name="stt_offline_badge">Offline Model</string>
+    <string name="stt_clear">Clear</string>
+    <string name="stt_tap_to_dictate">Tap mic to dictate</string>
+    <string name="stt_listening">Listening on-device...</string>
+    <string name="stt_ready">Local model ready</string>
+    <string name="stt_placeholder">Recognized speech will appear here... Tap the mic above to speak, or type to edit.</string>
+    <string name="stt_copy_text">Copy Text</string>
+    <string name="stt_share_text">Share</string>
+    <string name="stt_copy_text_minimize">Copy text &amp; minimize</string>
+    <string name="stt_no_text">No text to copy</string>
+    
+    <!-- History Bottom Sheet -->
+    <string name="history_title">Recent Recordings</string>
+    <string name="history_files_count">%1$d files</string>
+    <string name="history_empty">No recordings yet. Record audio to see them here!</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Toasts & Notifications -->
+    <string name="toast_mp3_copied">📋 MP3 copied! Ready to paste into chat</string>
+    <string name="toast_wav_copied">📋 Lossless WAV copied to clipboard!</string>
+    <string name="toast_text_copied">📋 Text copied to clipboard!</string>
+    <string name="toast_saved_downloads">✓ Saved to Downloads/VoiceDrop/</string>
+</resources>

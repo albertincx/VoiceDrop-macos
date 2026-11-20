@@ -1,4 +1,4 @@
-name: Build and Release VoiceDrop
+name: Build and Release VoiceDrop (macOS & Android)
 
 on:
   push:
@@ -18,9 +18,6 @@ jobs:
     name: Build Native macOS Application
     runs-on: macos-latest
 
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,7 +30,7 @@ jobs:
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VER="${GITHUB_REF#refs/tags/}"
           else
-            PLIST_VER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
+            PLIST_VER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist 2>/dev/null || echo "1.7.0")
             SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "latest")
             VER="v${PLIST_VER}-${SHORT_SHA}"
           fi
@@ -63,19 +60,103 @@ jobs:
           echo "DIST_ZIP=${DIST_ZIP}" >> $GITHUB_ENV
           ls -lh "${DIST_ZIP}"
 
-      - name: Upload Build Artifact
+      - name: Upload macOS Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VoiceDrop-${{ env.APP_VERSION }}-macos
+          name: VoiceDrop-macos
           path: ${{ env.DIST_ZIP }}
 
-      - name: Publish GitHub Release (on tag or manual dispatch)
-        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version_tag != ''
+  build-android:
+    name: Build Android Application (APK)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Android Release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Prepare APK Output
+        id: apk-output
+        run: |
+          if [ -n "${{ github.event.inputs.version_tag }}" ]; then
+            VER="${{ github.event.inputs.version_tag }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VER="${GITHUB_REF#refs/tags/}"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "latest")
+            VER="v1.2.3-${SHORT_SHA}"
+          fi
+          APK_NAME="VoiceDrop-${VER}-android.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "${APK_NAME}"
+          echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
+          ls -lh "${APK_NAME}"
+
+      - name: Upload Android Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceDrop-android
+          path: ${{ env.APK_NAME }}
+
+  publish-release:
+    name: Publish GitHub Release (macOS & Android)
+    needs: [build-macos, build-android]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve Version Name
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version_tag }}" ]; then
+            VER="${{ github.event.inputs.version_tag }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VER="${GITHUB_REF#refs/tags/}"
+          else
+            VER="v1.7.0"
+          fi
+          echo "RELEASE_VERSION=${VER}" >> $GITHUB_ENV
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: VoiceDrop-macos
+          path: release_assets
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: VoiceDrop-android
+          path: release_assets
+
+      - name: List Release Files
+        run: ls -lh release_assets/
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.APP_VERSION }}
-          name: VoiceDrop ${{ env.APP_VERSION }}
-          files: ${{ env.DIST_ZIP }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          name: VoiceDrop ${{ env.RELEASE_VERSION }}
+          files: release_assets/*
           draft: false
           prerelease: false
           generate_release_notes: true
