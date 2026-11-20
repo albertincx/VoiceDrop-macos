@@ -66,7 +66,9 @@ fun RecordingCard(
 
     var isLocalTranscribing by remember { mutableStateOf(false) }
     val isExtractingModel by voskTranscriber.isExtracting.collectAsState()
-    val isBusyTranscribing = isThisItemTranscribing || isLocalTranscribing || isExtractingModel
+    val isDownloadingModel by voskTranscriber.isDownloading.collectAsState()
+    val downloadModelProgress by voskTranscriber.downloadProgress.collectAsState()
+    val isBusyTranscribing = isThisItemTranscribing || isLocalTranscribing || isExtractingModel || isDownloadingModel
 
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -556,10 +558,17 @@ fun RecordingCard(
                                 )
                             }
                         }
+                        val desc = if (isDownloadingModel) {
+                            "${strings.downloadingModel} (${(downloadModelProgress * 100).toInt()}%)..."
+                        } else if (isExtractingModel) {
+                            strings.extractingModel
+                        } else {
+                            strings.useLocalModelDesc
+                        }
                         Text(
-                            text = strings.useLocalModelDesc,
+                            text = desc,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = TextMuted,
+                                color = if (isDownloadingModel || isExtractingModel) VoiceDropPurpleLight else TextMuted,
                                 fontSize = 11.sp
                             )
                         )
@@ -776,8 +785,15 @@ fun RecordingCard(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+                        val statusLabel = if (isDownloadingModel) {
+                            "${strings.downloadingModel} ${(downloadModelProgress * 100).toInt()}%"
+                        } else if (isExtractingModel) {
+                            strings.extractingModel
+                        } else {
+                            strings.recognizing
+                        }
                         Text(
-                            text = strings.recognizing,
+                            text = statusLabel,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp

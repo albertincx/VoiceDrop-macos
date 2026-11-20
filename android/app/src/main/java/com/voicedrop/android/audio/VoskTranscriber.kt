@@ -13,7 +13,6 @@ import org.vosk.Recognizer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
@@ -22,119 +21,174 @@ import java.util.zip.ZipInputStream
 
 /**
  * VoskTranscriber provides 100% on-device offline speech recognition using
- * the embedded Kaldi/Vosk model. It decodes recorded WAV audio directly
- * without any Google UI, internet connection, or external service dependencies.
+ * Vosk/Kaldi models. Models are downloaded on-demand and cached in internal storage,
+ * keeping the initial APK lightweight (< 15 MB) while offering full offline capability.
  */
 class VoskTranscriber(private val context: Context) {
+
+    companion object {
+        const val VOSK_RU_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip"
+        const val VOSK_EN_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+    }
 
     private var ruModel: Model? = null
     private var enModel: Model? = null
 
+    private val _isDownloading = MutableStateFlow(false)
+    val isDownloading: StateFlow<Boolean> = _isDownloading.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow(0f)
+    val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
+
     private val _isExtracting = MutableStateFlow(false)
     val isExtracting: StateFlow<Boolean> = _isExtracting.asStateFlow()
-
-    private val _isDownloadingEn = MutableStateFlow(false)
-    val isDownloadingEn: StateFlow<Boolean> = _isDownloadingEn.asStateFlow()
-
-    private val _downloadEnProgress = MutableStateFlow(0f)
-    val downloadEnProgress: StateFlow<Float> = _downloadEnProgress.asStateFlow()
 
     private val _statusText = MutableStateFlow("Vosk local model ready")
     val statusText: StateFlow<String> = _statusText.asStateFlow()
 
     fun isRussianModelReady(): Boolean {
+        if (ruModel != null) return true
         val targetDir = File(context.filesDir, "model-ru")
         val readyFlag = File(targetDir, ".ready")
         val finalMdl = File(targetDir, "am/final.mdl")
-        return (readyFlag.exists() && finalMdl.exists()) || ruModel != null
+        return readyFlag.exists() && finalMdl.exists()
     }
 
     fun isEnglishModelReady(): Boolean {
+        if (enModel != null) return true
         val targetDir = File(context.filesDir, "model-en")
         val readyFlag = File(targetDir, ".ready")
         val finalMdl = File(targetDir, "am/final.mdl")
-        return (readyFlag.exists() && finalMdl.exists()) || enModel != null
+        return readyFlag.exists() && finalMdl.exists()
     }
 
-    suspend fun prepareRussianModel(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun prepareRussianModel(onProgress: ((Float) -> Unit)? = null): Boolean = withContext(Dispatchers.IO) {
         if (ruModel != null) return@withContext true
         val targetDir = File(context.filesDir, "model-ru")
         val readyFlag = File(targetDir, ".ready")
         val finalMdl = File(targetDir, "am/final.mdl")
 
-        if (!readyFlag.exists() || !finalMdl.exists()) {
+        if (readyFlag.exists() && finalMdl.exists()) {
+            return@withContext try {
+                ruModel = Model(targetDir.absolutePath)
+                _statusText.value = "Russian local model ready"
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+
+        // 1. Fallback: Check if bundled in assets
+        if (hasAssetFolder("model-ru")) {
             _isExtracting.value = true
             _statusText.value = "Unpacking Russian local model..."
             try {
                 targetDir.mkdirs()
                 copyAssetFolder(context.assets, "model-ru", targetDir)
                 readyFlag.createNewFile()
+                ruModel = Model(targetDir.absolutePath)
+                _statusText.value = "Russian local model ready"
+                return@withContext true
             } catch (e: Exception) {
                 e.printStackTrace()
-                _isExtracting.value = false
-                _statusText.value = "Failed to unpack model: ${e.message}"
-                return@withContext false
             } finally {
                 _isExtracting.value = false
             }
         }
 
-        return@withContext try {
-            ruModel = Model(targetDir.absolutePath)
-            _statusText.value = "Russian local model ready"
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            _statusText.value = "Error loading model: ${e.message}"
-            false
+        // 2. Download from web on first use
+        return@withContext downloadModel(
+            url = VOSK_RU_MODEL_URL,
+            targetDirName = "model-ru",
+            languageLabel = "Russian",
+            onProgress = onProgress
+        ) { model ->
+            ruModel = model
         }
     }
 
-    suspend fun downloadEnglishModel(onProgress: (Float) -> Unit): Boolean = withContext(Dispatchers.IO) {
+    suspend fun prepareEnglishModel(onProgress: ((Float) -> Unit)? = null): Boolean = withContext(Dispatchers.IO) {
         if (enModel != null) return@withContext true
         val targetDir = File(context.filesDir, "model-en")
         val readyFlag = File(targetDir, ".ready")
-        if (readyFlag.exists()) {
+        val finalMdl = File(targetDir, "am/final.mdl")
+
+        if (readyFlag.exists() && finalMdl.exists()) {
             return@withContext try {
                 enModel = Model(targetDir.absolutePath)
+                _statusText.value = "English local model ready"
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+
+        return@withContext downloadModel(
+            url = VOSK_EN_MODEL_URL,
+            targetDirName = "model-en",
+            languageLabel = "English",
+            onProgress = onProgress
+        ) { model ->
+            enModel = model
+        }
+    }
+
+    private suspend fun downloadModel(
+        url: String,
+        targetDirName: String,
+        languageLabel: String,
+        onProgress: ((Float) -> Unit)? = null,
+        onLoaded: (Model) -> Unit
+    ): Boolean = withContext(Dispatchers.IO) {
+        val targetDir = File(context.filesDir, targetDirName)
+        val readyFlag = File(targetDir, ".ready")
+        val finalMdl = File(targetDir, "am/final.mdl")
+
+        if (readyFlag.exists() && finalMdl.exists()) {
+            return@withContext try {
+                val model = Model(targetDir.absolutePath)
+                onLoaded(model)
                 true
             } catch (e: Exception) {
                 false
             }
         }
 
-        _isDownloadingEn.value = true
-        _statusText.value = "Downloading English offline model (40 MB)..."
-        val zipUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+        _isDownloading.value = true
+        _downloadProgress.value = 0f
+        _statusText.value = "Downloading $languageLabel offline model (~45 MB)..."
 
         try {
-            val url = URL(zipUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
+            val connection = URL(url).openConnection() as HttpURLConnection
+            connection.connectTimeout = 20000
+            connection.readTimeout = 60000
+            connection.instanceFollowRedirects = true
             connection.connect()
 
             val totalBytes = connection.contentLength.toFloat()
             var downloadedBytes = 0L
 
-            val tempZip = File(context.cacheDir, "model-en.zip")
+            val tempZip = File(context.cacheDir, "$targetDirName.zip")
             connection.inputStream.use { input ->
                 FileOutputStream(tempZip).use { output ->
-                    val buffer = ByteArray(8192)
+                    val buffer = ByteArray(16384)
                     var read: Int
                     while (input.read(buffer).also { read = it } != -1) {
                         output.write(buffer, 0, read)
                         downloadedBytes += read
                         if (totalBytes > 0) {
-                            val prog = downloadedBytes / totalBytes
-                            _downloadEnProgress.value = prog
-                            onProgress(prog)
+                            val prog = (downloadedBytes / totalBytes).coerceIn(0f, 1f)
+                            _downloadProgress.value = prog
+                            onProgress?.invoke(prog)
                         }
                     }
                 }
             }
 
-            // Extract zip
+            _isExtracting.value = true
+            _statusText.value = "Unpacking $languageLabel model..."
             targetDir.mkdirs()
             ZipInputStream(FileInputStream(tempZip)).use { zipIn ->
                 var entry = zipIn.nextEntry
@@ -158,15 +212,17 @@ class VoskTranscriber(private val context: Context) {
             tempZip.delete()
             readyFlag.createNewFile()
 
-            enModel = Model(targetDir.absolutePath)
-            _statusText.value = "English local model ready"
+            val model = Model(targetDir.absolutePath)
+            onLoaded(model)
+            _statusText.value = "$languageLabel offline model ready"
             true
         } catch (e: Exception) {
             e.printStackTrace()
-            _statusText.value = "Download failed: ${e.message}"
+            _statusText.value = "Model download error: ${e.message}"
             false
         } finally {
-            _isDownloadingEn.value = false
+            _isDownloading.value = false
+            _isExtracting.value = false
         }
     }
 
@@ -181,15 +237,14 @@ class VoskTranscriber(private val context: Context) {
     ): String = withContext(Dispatchers.IO) {
         if (!wavFile.exists()) return@withContext ""
 
-        val model = if (isRussian) {
-            if (!prepareRussianModel()) return@withContext ""
-            ruModel
+        val modelReady = if (isRussian) {
+            prepareRussianModel()
         } else {
-            if (!isEnglishModelReady()) {
-                if (!downloadEnglishModel { }) return@withContext ""
-            }
-            enModel
-        } ?: return@withContext ""
+            prepareEnglishModel()
+        }
+        if (!modelReady) return@withContext ""
+
+        val model = (if (isRussian) ruModel else enModel) ?: return@withContext ""
 
         return@withContext try {
             val recognizer = Recognizer(model, 16000.0f)
@@ -224,6 +279,15 @@ class VoskTranscriber(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
             ""
+        }
+    }
+
+    private fun hasAssetFolder(path: String): Boolean {
+        return try {
+            val list = context.assets.list(path)
+            list != null && list.isNotEmpty() && list.contains("am")
+        } catch (e: Exception) {
+            false
         }
     }
 

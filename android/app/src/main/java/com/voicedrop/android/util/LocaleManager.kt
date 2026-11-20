@@ -69,7 +69,10 @@ data class Strings(
     val useLocalModel: String,
     val useLocalModelDesc: String,
     val localModelMissingToast: String,
-    val openVoiceSettings: String
+    val openVoiceSettings: String,
+    val downloadingModel: String,
+    val extractingModel: String,
+    val modelDownloaded: String
 )
 
 val EnglishStrings = Strings(
@@ -128,7 +131,10 @@ val EnglishStrings = Strings(
     useLocalModel = "Use local offline model",
     useLocalModelDesc = "On-device recognition without internet (requires offline language pack)",
     localModelMissingToast = "Offline model not installed. Open Voice Settings to download language pack, or uncheck for Google Cloud.",
-    openVoiceSettings = "Voice Settings"
+    openVoiceSettings = "Voice Settings",
+    downloadingModel = "Downloading model",
+    extractingModel = "Unpacking model...",
+    modelDownloaded = "Offline model ready"
 )
 
 val RussianStrings = Strings(
@@ -195,9 +201,12 @@ val RussianStrings = Strings(
     sttNoSpeechDetected = "Речь не обнаружена. Пожалуйста, говорите в микрофон.",
     sttRecognitionError = "Распознавание недоступно. Проверьте службы речи Google.",
     useLocalModel = "Использовать локальную модель",
-    useLocalModelDesc = "Офлайн-распознавание на устройстве (требуется офлайн языковой пакет)",
+    useLocalModelDesc = "Офлайн-распознавание на устройстве (скачивается автоматически при первом включении)",
     localModelMissingToast = "Офлайн-модель не скачана. Загрузите языковой пакет в настройках речи или отключите галочку.",
-    openVoiceSettings = "Настройки речи"
+    openVoiceSettings = "Настройки речи",
+    downloadingModel = "Загрузка модели",
+    extractingModel = "Распаковка модели...",
+    modelDownloaded = "Офлайн-модель готова"
 )
 
 val LocalAppStrings = compositionLocalOf { EnglishStrings }
