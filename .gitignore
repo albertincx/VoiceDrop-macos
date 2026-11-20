@@ -47,6 +47,21 @@ wheels/
 # Temporary & Swap files
 *.swp
 *.swo
-*~
 *.tmp
 *.tmp.wav
+
+# Android
+android/.gradle/
+android/local.properties
+android/*/build/
+android/build/
+android/*.apk
+android/*.aab
+android/.idea/
+android/*.iml
+android/captures/
+.cxx/
+android/app/src/main/assets/model-ru/*
+!android/app/src/main/assets/model-ru/.gitkeep
+
+

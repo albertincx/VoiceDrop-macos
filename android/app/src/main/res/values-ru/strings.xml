@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">VoiceDrop</string>
+    <string name="app_subtitle">Студия качественной записи MP3 и WAV</string>
+    <string name="version_tag">v1.2.0</string>
+    
+    <!-- Top Bar -->
+    <string name="recordings_history">История записей</string>
+    <string name="minimize_app">Свернуть приложение</string>
+    <string name="language_toggle">Язык: Русский</string>
+    
+    <!-- Permissions -->
+    <string name="permission_title">Требуется доступ к микрофону</string>
+    <string name="permission_desc">VoiceDrop необходим микрофон для качественной записи звука.</string>
+    <string name="permission_allow">Разрешить</string>
+    
+    <!-- Audio Input -->
+    <string name="audio_input_source">Источник звука</string>
+    <string name="mic_default">Стандартный микрофон</string>
+    <string name="mic_voice_recognition">Распознавание речи (Чистый звук)</string>
+    <string name="mic_camcorder">Микрофон камеры</string>
+    <string name="mic_unprocessed">Без обработки (Raw PCM)</string>
+    
+    <!-- Recording Center -->
+    <string name="status_studio_ready">СТУДИЯ ГОТОВА</string>
+    <string name="status_recording">ЗАПИСЬ MP3 + WAV</string>
+    <string name="tap_to_record">Нажмите для записи голоса</string>
+    <string name="tap_to_stop">Нажмите для остановки и MP3</string>
+    
+    <!-- Recording Card -->
+    <string name="latest_recording">ПОСЛЕДНЯЯ ЗАПИСЬ</string>
+    <string name="copy_mp3">Копировать MP3</string>
+    <string name="copy_wav">Копировать WAV</string>
+    <string name="copied">Скопировано!</string>
+    <string name="share">Поделиться</string>
+    <string name="share_mp3">Поделиться MP3</string>
+    <string name="share_wav">Поделиться Lossless WAV</string>
+    <string name="save_downloads">Сохранить в загрузки</string>
+    <string name="paste_hint">💡 Вставьте прямо в чат через буфер обмена</string>
+    <string name="copy_minimize">Скопировать и свернуть</string>
+    
+    <!-- Speech Recognition (STT) -->
+    <string name="stt_section_header">РАСПОЗНАВАНИЕ РЕЧИ (OFFLINE AI)</string>
+    <string name="stt_title">Распознавание речи</string>
+    <string name="stt_subtitle">Локальная нейросеть устройства</string>
+    <string name="stt_offline_badge">Офлайн модель</string>
+    <string name="stt_clear">Очистить</string>
+    <string name="stt_tap_to_dictate">Нажмите микрофон для диктовки</string>
+    <string name="stt_listening">Слушаю на устройстве...</string>
+    <string name="stt_ready">Локальная модель готова</string>
+    <string name="stt_placeholder">Распознанный текст появится здесь... Нажмите микрофон выше или начните вводить.</string>
+    <string name="stt_copy_text">Копировать текст</string>
+    <string name="stt_share_text">Поделиться</string>
+    <string name="stt_copy_text_minimize">Скопировать текст и свернуть</string>
+    <string name="stt_no_text">Нет текста для копирования</string>
+    
+    <!-- History Bottom Sheet -->
+    <string name="history_title">Недавние записи</string>
+    <string name="history_files_count">%1$d файлов</string>
+    <string name="history_empty">Записей пока нет. Запишите аудио, чтобы увидеть их здесь!</string>
+    <string name="delete">Удалить</string>
+    
+    <!-- Toasts & Notifications -->
+    <string name="toast_mp3_copied">📋 MP3 скопирован! Готов к вставке в чат</string>
+    <string name="toast_wav_copied">📋 Lossless WAV скопирован в буфер обмена!</string>
+    <string name="toast_text_copied">📋 Текст скопирован в буфер обмена!</string>
+    <string name="toast_saved_downloads">✓ Сохранено в Загрузки/VoiceDrop/</string>
+</resources>
