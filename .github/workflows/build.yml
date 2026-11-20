@@ -84,6 +84,22 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      - name: Cache Vosk Model
+        id: cache-vosk
+        uses: actions/cache@v4
+        with:
+          path: android/app/src/main/assets/model-ru
+          key: vosk-model-small-ru-0.22
+
+      - name: Download Vosk Offline Russian Model
+        if: steps.cache-vosk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p android/app/src/main/assets/model-ru
+          curl -sL https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip -o /tmp/model.zip
+          unzip -q -o /tmp/model.zip -d /tmp/vosk_extracted
+          cp -r /tmp/vosk_extracted/vosk-model-small-ru-0.22/* android/app/src/main/assets/model-ru/
+          rm -rf /tmp/model.zip /tmp/vosk_extracted
+
       - name: Build Android Release APK
         working-directory: android
         run: ./gradlew assembleRelease --stacktrace
@@ -100,7 +116,8 @@ jobs:
             VER="v1.2.3-${SHORT_SHA}"
           fi
           APK_NAME="VoiceDrop-${VER}-android.apk"
-          cp android/app/build/outputs/apk/release/app-release.apk "${APK_NAME}"
+          APK_SRC=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          cp "${APK_SRC}" "${APK_NAME}"
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
           ls -lh "${APK_NAME}"
 
