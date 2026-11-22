@@ -660,6 +660,49 @@
       border-top: 1px solid var(--border);
       background: var(--surface-alt);
     }
+
+    /* YouTube Shorts Demo Section */
+    .video-section {
+      margin-top: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      text-align: center;
+    }
+    .video-section h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+    .video-section p {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .shorts-frame {
+      width: 100%;
+      max-width: 320px;
+      aspect-ratio: 9 / 16;
+      margin: 0 auto;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+    .shorts-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .video-link {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--brand);
+      text-decoration: none;
+    }
+    .video-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -707,6 +750,21 @@
         <button class="btn primary" id="btn-next" type="button">Next →</button>
       </footer>
     </main>
+
+    <section class="video-section" aria-labelledby="video-title">
+      <h2 id="video-title">🎬 Video Demo (YouTube Shorts)</h2>
+      <p id="video-desc">Watch VoiceDrop in action on macOS — instant recording, Drag &amp; Drop, and Whisper transcription.</p>
+      <div class="shorts-frame">
+        <iframe
+          src="https://www.youtube.com/embed/aOspvlEqvQw"
+          title="VoiceDrop YouTube Shorts Demo"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+      </div>
+      <a class="video-link" id="video-link" href="https://youtube.com/shorts/aOspvlEqvQw" target="_blank" rel="noopener">Open on YouTube ↗</a>
+    </section>
   </div>
 
   <script>
@@ -714,6 +772,9 @@
       en: {
         heroSub: "Interactive Walkthrough — macOS & Android AI Voice Studio",
         dl: "Download Latest",
+        videoTitle: "🎬 Video Demo (YouTube Shorts)",
+        videoDesc: "Watch VoiceDrop in action on macOS — instant recording, Drag & Drop, and Whisper transcription.",
+        videoLink: "Open on YouTube ↗",
         s1: "Record", s2: "Drag & Drop", s3: "Transcribe & Translate", s4: "History",
         prev: "← Back", next: "Next →", restart: "Restart Demo ↻",
         stepOf: (i) => `VoiceDrop — Step ${i + 1} of 4`,
@@ -750,6 +811,9 @@
       ru: {
         heroSub: "Интерактивная демонстрация — macOS и Android AI Voice Studio",
         dl: "Скачать релиз",
+        videoTitle: "🎬 Видео-демо (YouTube Shorts)",
+        videoDesc: "Посмотри VoiceDrop в работе на macOS — быстрая запись, Drag & Drop и локальный Whisper.",
+        videoLink: "Открыть на YouTube ↗",
         s1: "Запись", s2: "Drag & Drop", s3: "Текст и перевод", s4: "История",
         prev: "← Назад", next: "Далее →", restart: "Начать заново ↻",
         stepOf: (i) => `VoiceDrop — Шаг ${i + 1} из 4`,
@@ -883,6 +947,9 @@
       const l = t();
       document.getElementById("hero-sub").textContent = l.heroSub;
       document.getElementById("dl-label").textContent = l.dl;
+      document.getElementById("video-title").textContent = l.videoTitle;
+      document.getElementById("video-desc").textContent = l.videoDesc;
+      document.getElementById("video-link").textContent = l.videoLink;
       document.getElementById("win-title").textContent = l.stepOf(state.step);
       document.getElementById("step-indicator").textContent = `${state.step + 1} / 4`;
       document.getElementById("btn-prev").textContent = l.prev;

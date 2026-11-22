@@ -19,6 +19,16 @@
   <img src="Resources/screenshot.jpg" alt="VoiceDrop Screenshot" width="600">
 </p>
 
+### 🎬 Video Demo
+
+<p align="center">
+  <a href="https://youtube.com/shorts/aOspvlEqvQw" target="_blank">
+    <img src="https://img.youtube.com/vi/aOspvlEqvQw/hqdefault.jpg" alt="Watch VoiceDrop Demo on YouTube Shorts" width="360">
+  </a>
+  <br>
+  <a href="https://youtube.com/shorts/aOspvlEqvQw">▶ Watch YouTube Shorts Demo</a> • <a href="https://albertincx.github.io/VoiceDrop-macos/">🚀 Try Interactive Web Demo</a>
+</p>
+
 ---
 
 ## 🌟 Highlights
