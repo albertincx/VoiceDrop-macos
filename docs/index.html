@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>VoiceDrop — Interactive Demo</title>
+  <style>
+    :root {
+      /* Raw light/dark palette tokens */
+      --bg-light: #f4f6fb;
+      --bg-dark: #0e1117;
+      --surface-light: #ffffff;
+      --surface-dark: #161b24;
+      --surface-alt-light: #f0f3f9;
+      --surface-alt-dark: #1e2532;
+      --border-light: rgba(15, 23, 42, 0.12);
+      --border-dark: rgba(255, 255, 255, 0.12);
+      --text-light: #0f172a;
+      --text-dark: #f1f5f9;
+      --muted-light: #475569;
+      --muted-dark: #94a3b8;
+      --brand-light: #2563eb;
+      --brand-dark: #3b82f6;
+      --purple-light: #7c3aed;
+      --purple-dark: #a78bfa;
+      --green-light: #16a34a;
+      --green-dark: #4ade80;
+      --orange-light: #ea580c;
+      --orange-dark: #fb923c;
+      --red-light: #dc2626;
+      --red-dark: #f87171;
+      --scroll-thumb-light: #94a3b8;
+      --scroll-thumb-dark: #475569;
+      --scroll-track-light: #e2e8f0;
+      --scroll-track-dark: #161b24;
+
+      /* Fallback values for browsers without light-dark() */
+      --bg: var(--bg-light);
+      --surface: var(--surface-light);
+      --surface-alt: var(--surface-alt-light);
+      --border: var(--border-light);
+      --text: var(--text-light);
+      --muted: var(--muted-light);
+      --brand: var(--brand-light);
+      --purple: var(--purple-light);
+      --green: var(--green-light);
+      --orange: var(--orange-light);
+      --red: var(--red-light);
+      --scroll-thumb: var(--scroll-thumb-light);
+      --scroll-track: var(--scroll-track-light);
+
+      color-scheme: light dark;
+      accent-color: var(--brand);
+      scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: var(--bg-dark);
+        --surface: var(--surface-dark);
+        --surface-alt: var(--surface-alt-dark);
+        --border: var(--border-dark);
+        --text: var(--text-dark);
+        --muted: var(--muted-dark);
+        --brand: var(--brand-dark);
+        --purple: var(--purple-dark);
+        --green: var(--green-dark);
+        --orange: var(--orange-dark);
+        --red: var(--red-dark);
+        --scroll-thumb: var(--scroll-thumb-dark);
+        --scroll-track: var(--scroll-track-dark);
+      }
+    }
+
+    @supports (color: light-dark(white, black)) {
+      :root {
+        --bg: light-dark(var(--bg-light), var(--bg-dark));
+        --surface: light-dark(var(--surface-light), var(--surface-dark));
+        --surface-alt: light-dark(var(--surface-alt-light), var(--surface-alt-dark));
+        --border: light-dark(var(--border-light), var(--border-dark));
+        --text: light-dark(var(--text-light), var(--text-dark));
+        --muted: light-dark(var(--muted-light), var(--muted-dark));
+        --brand: light-dark(var(--brand-light), var(--brand-dark));
+        --purple: light-dark(var(--purple-light), var(--purple-dark));
+        --green: light-dark(var(--green-light), var(--green-dark));
+        --orange: light-dark(var(--orange-light), var(--orange-dark));
+        --red: light-dark(var(--red-light), var(--red-dark));
+        --scroll-thumb: light-dark(var(--scroll-thumb-light), var(--scroll-thumb-dark));
+        --scroll-track: light-dark(var(--scroll-track-light), var(--scroll-track-dark));
+      }
+    }
+
+    @supports not (scrollbar-color: auto) {
+      body::-webkit-scrollbar { width: 10px; height: 10px; }
+      body::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 5px; }
+      body::-webkit-scrollbar-track { background: var(--scroll-track); }
+    }
+
+    /* Directional View Transitions for Next / Back steps */
+    @keyframes slide-to-left {
+      to { transform: translateX(-36px); opacity: 0; }
+    }
+    @keyframes slide-from-right {
+      from { transform: translateX(36px); opacity: 0; }
+    }
+    @keyframes slide-to-right {
+      to { transform: translateX(36px); opacity: 0; }
+    }
+    @keyframes slide-from-left {
+      from { transform: translateX(-36px); opacity: 0; }
+    }
+
+    .demo-stage {
+      view-transition-name: demo-stage;
+    }
+
+    ::view-transition-group(demo-stage) {
+      animation: 0.32s ease-in-out both;
+    }
+
+    html:active-view-transition-type(forward)::view-transition-old(demo-stage) {
+      animation: 0.28s ease-in-out both slide-to-left;
+    }
+    html:active-view-transition-type(forward)::view-transition-new(demo-stage) {
+      animation: 0.28s ease-in-out both slide-from-right;
+    }
+    html:active-view-transition-type(backward)::view-transition-old(demo-stage) {
+      animation: 0.28s ease-in-out both slide-to-right;
+    }
+    html:active-view-transition-type(backward)::view-transition-new(demo-stage) {
+      animation: 0.28s ease-in-out both slide-from-left;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(demo-stage),
+      ::view-transition-old(demo-stage),
+      ::view-transition-new(demo-stage) {
+        animation: none !important;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 920px;
+    }
+
+    /* Top Hero Bar */
+    .hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .lang-toggle {
+      display: inline-flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+    }
+    .lang-toggle button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .lang-toggle button.active {
+      background: var(--brand);
+      color: #fff;
+    }
+    .download-link {
+      text-decoration: none;
+      background: var(--brand);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Stepper */
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .step-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+    }
+    .step-pill.active {
+      border-color: var(--brand);
+      color: var(--text);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .step-pill.done .step-num {
+      background: var(--green);
+      color: #fff;
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--surface-alt);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-pill.active .step-num {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    /* macOS Window Frame */
+    .mac-window {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+    }
+    .mac-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+    }
+    .traffic-lights {
+      display: flex;
+      gap: 8px;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.r { background: #ff5f56; }
+    .dot.y { background: #ffbd2e; }
+    .dot.g { background: #27c93f; }
+    .window-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .stage-body {
+      padding: 24px;
+      min-height: 390px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .step-header h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+    .step-header p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Card Styles */
+    .card {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    /* Step 1: Compact Recording Deck */
+    .mic-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .mic-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mic-controls select {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--text);
+      font-size: 12px;
+    }
+    .btn-refresh {
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .deck-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 22px;
+    }
+    .record-btn {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .record-btn:hover { transform: scale(1.04); }
+    .record-btn.recording {
+      background: var(--red);
+      box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.22);
+    }
+    .timer {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .timer.recording { color: var(--red); }
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 36px;
+    }
+    .bar {
+      width: 4px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--muted);
+      opacity: 0.45;
+      transition: height 0.08s ease;
+    }
+    .waveform.active .bar {
+      background: var(--red);
+      opacity: 1;
+    }
+    .kbd-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .denoise-row {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(22, 163, 74, 0.14);
+      color: var(--green);
+    }
+
+    /* Step 2: Drag & Drop */
+    .dnd-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .dnd-layout { grid-template-columns: 1fr; }
+      .stepper { grid-template-columns: repeat(2, 1fr); }
+    }
+    .draggable-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 2px dashed var(--brand);
+      cursor: grab;
+      user-select: none;
+    }
+    .draggable-card:active { cursor: grabbing; }
+    .file-badge {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .drop-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .drop-target {
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+    }
+    .drop-target.over {
+      border-color: var(--brand);
+      background: rgba(59, 130, 246, 0.1);
+      transform: scale(1.02);
+    }
+    .drop-target.dropped {
+      border-style: solid;
+      border-color: var(--green);
+    }
+    .drop-target-title {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .drop-target-status {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .drop-target.dropped .drop-target-status {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* Step 3: Transcribe & Translate */
+    .stt-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .btn.soft-blue {
+      background: rgba(59, 130, 246, 0.14);
+      border-color: rgba(59, 130, 246, 0.35);
+      color: var(--brand);
+    }
+    .btn.danger {
+      color: var(--red);
+      border-color: rgba(220, 38, 38, 0.35);
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .text-box {
+      width: 100%;
+      min-height: 78px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .translation-panel {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      background: var(--surface);
+    }
+
+    /* Step 4: History */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .history-row.selected {
+      border-color: var(--brand);
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .play-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dur-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--surface-alt);
+      color: var(--muted);
+    }
+    .del-x {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .del-x:hover { color: var(--red); background: rgba(220, 38, 38, 0.12); }
+
+    /* Footer Nav */
+    .footer-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div class="brand">
+        <div class="brand-icon">🎙️</div>
+        <div>
+          <h1>VoiceDrop</h1>
+          <p id="hero-sub">Interactive Walkthrough — macOS &amp; Android AI Voice Studio</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button id="lang-en" class="active" type="button">EN</button>
+          <button id="lang-ru" type="button">RU</button>
+        </div>
+        <a class="download-link" href="https://github.com/albertincx/VoiceDrop-macos/releases/latest" target="_blank" rel="noopener">
+          <span id="dl-label">Download Latest</span> ↗
+        </a>
+      </div>
+    </header>
+
+    <nav class="stepper" aria-label="Demo steps">
+      <button class="step-pill active" data-step="0" type="button"><span class="step-num">1</span><span class="step-txt" data-i18n="s1">Record</span></button>
+      <button class="step-pill" data-step="1" type="button"><span class="step-num">2</span><span class="step-txt" data-i18n="s2">Drag &amp; Drop</span></button>
+      <button class="step-pill" data-step="2" type="button"><span class="step-num">3</span><span class="step-txt" data-i18n="s3">Transcribe &amp; Translate</span></button>
+      <button class="step-pill" data-step="3" type="button"><span class="step-num">4</span><span class="step-txt" data-i18n="s4">History</span></button>
+    </nav>
+
+    <main class="mac-window">
+      <div class="mac-titlebar">
+        <div class="traffic-lights">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        </div>
+        <div class="window-title" id="win-title">VoiceDrop — Step 1 of 4</div>
+        <div style="width:44px"></div>
+      </div>
+
+      <section class="stage-body demo-stage" id="stage"></section>
+
+      <footer class="footer-nav">
+        <button class="btn" id="btn-prev" type="button">← Back</button>
+        <div style="font-size:12px;color:var(--muted)" id="step-indicator">1 / 4</div>
+        <button class="btn primary" id="btn-next" type="button">Next →</button>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const I18N = {
+      en: {
+        heroSub: "Interactive Walkthrough — macOS & Android AI Voice Studio",
+        dl: "Download Latest",
+        s1: "Record", s2: "Drag & Drop", s3: "Transcribe & Translate", s4: "History",
+        prev: "← Back", next: "Next →", restart: "Restart Demo ↻",
+        stepOf: (i) => `VoiceDrop — Step ${i + 1} of 4`,
+        s1Title: "1. Record Voice with Studio Noise Suppression",
+        s1Desc: "Click Record or press Spacebar. VoiceDrop captures clean audio with Wiener DSP noise suppression and automatically exports compact MP3.",
+        micLabel: "Microphone:",
+        record: "Record", stop: "Stop",
+        spaceHint: "— press to start / stop recording",
+        denoiseLabel: "Studio Spectral Noise Suppression (Wiener DSP)",
+        recordedOk: "Saved Voice_2026-11-22_19-30-00.mp3 — ready for Step 2!",
+        s2Title: "2. Drag & Drop into Any App",
+        s2Desc: "Drag the recorded MP3 card onto Antigravity, Telegram, Slack, or Finder below (or click any target to test dropping).",
+        dragHint: "Drag from here into any app →",
+        dropPrompt: "Drop MP3 here or click",
+        droppedOk: "✓ Voice_2026-11-22_19-30-00.mp3 attached!",
+        copyMp3: "Copy MP3", copied: "✓ Copied!",
+        s3Title: "3. Local Whisper Transcription & Google Translate",
+        s3Desc: "Recognize speech 100% offline with local Whisper (memory freed immediately after), then translate in one click.",
+        transcribeBtn: "Transcribe Speech", transcribing: "Transcribing...",
+        translateBtn: "Translate", translating: "Translating...",
+        copyText: "Copy Text", translationTitle: "Translation",
+        sampleOriginal: "Hey team, let's ship the new VoiceDrop release with instant MP3 drag-and-drop and built-in translation today.",
+        sampleTranslations: {
+          ru: "Привет, команда! Давайте выпустим новый релиз VoiceDrop с мгновенным Drag & Drop MP3 и встроенным переводом уже сегодня.",
+          en: "Hey team, let's ship the new VoiceDrop release with instant MP3 drag-and-drop and built-in translation today.",
+          de: "Hallo Team, lasst uns heute das neue VoiceDrop-Release mit sofortigem MP3-Drag-and-Drop und integrierter Übersetzung veröffentlichen.",
+          es: "Hola equipo, lancemos hoy la nueva versión de VoiceDrop con arrastrar y soltar MP3 instantáneo y traducción integrada.",
+          fr: "Salut l'équipe, publions aujourd'hui la nouvelle version de VoiceDrop avec glisser-déposer MP3 instantané et traduction intégrée."
+        },
+        s4Title: "4. MP3 Recording History with Instant Playback",
+        s4Desc: "Only compact MP3 files are kept in history with duration badges, inline Play/Pause preview, and one-click permanent delete.",
+        select: "Select", selected: "Selected", emptyHist: "All demo recordings deleted. Click Restore to bring them back.", restore: "Restore Demo List"
+      },
+      ru: {
+        heroSub: "Интерактивная демонстрация — macOS и Android AI Voice Studio",
+        dl: "Скачать релиз",
+        s1: "Запись", s2: "Drag & Drop", s3: "Текст и перевод", s4: "История",
+        prev: "← Назад", next: "Далее →", restart: "Начать заново ↻",
+        stepOf: (i) => `VoiceDrop — Шаг ${i + 1} из 4`,
+        s1Title: "1. Запись голоса со студийным шумоподавлением",
+        s1Desc: "Нажми «Запись» или Пробел. VoiceDrop очистит звук фильтром Винера (DSP) и автоматически сохранит компактный MP3.",
+        micLabel: "Микрофон:",
+        record: "Запись", stop: "Стоп",
+        spaceHint: "— нажать, чтобы начать / остановить запись",
+        denoiseLabel: "Студийное спектральное шумоподавление (Wiener DSP)",
+        recordedOk: "Сохранено Voice_2026-11-22_19-30-00.mp3 — можно переходить к Шагу 2!",
+        s2Title: "2. Drag & Drop в любые приложения",
+        s2Desc: "Перетащи карточку с MP3 в Antigravity, Telegram, Slack или Finder (или просто кликни по приложению для проверки).",
+        dragHint: "Потяните отсюда в приложение →",
+        dropPrompt: "Перетащите MP3 сюда или кликните",
+        droppedOk: "✓ Файл Voice_2026-11-22_19-30-00.mp3 отправлен!",
+        copyMp3: "Копировать MP3", copied: "✓ Скопировано!",
+        s3Title: "3. Локальный Whisper и перевод через Google Translate",
+        s3Desc: "Распознавание речи 100% офлайн (память освобождается сразу после завершения) и мгновенный перевод текста в один клик.",
+        transcribeBtn: "Распознать текст", transcribing: "Распознавание...",
+        translateBtn: "Перевести", translating: "Перевод...",
+        copyText: "Копировать", translationTitle: "Перевод",
+        sampleOriginal: "Привет, команда! Давайте выпустим новый релиз VoiceDrop с мгновенным Drag & Drop MP3 и встроенным переводом уже сегодня.",
+        sampleTranslations: {
+          en: "Hey team, let's ship the new VoiceDrop release with instant MP3 drag-and-drop and built-in translation today.",
+          ru: "Привет, команда! Давайте выпустим новый релиз VoiceDrop с мгновенным Drag & Drop MP3 и встроенным переводом уже сегодня.",
+          de: "Hallo Team, lasst uns heute das neue VoiceDrop-Release mit sofortigem MP3-Drag-and-Drop und integrierter Übersetzung veröffentlichen.",
+          es: "Hola equipo, lancemos hoy la nueva versión de VoiceDrop con arrastrar y soltar MP3 instantáneo y traducción integrada.",
+          fr: "Salut l'équipe, publions aujourd'hui la nouvelle version de VoiceDrop avec glisser-déposer MP3 instantané et traduction intégrée."
+        },
+        s4Title: "4. История MP3-записей с быстрым прослушиванием",
+        s4Desc: "В истории хранятся только MP3 с длительностью, встроенной кнопкой Play/Pause и удалением в один клик.",
+        select: "Выбрать", selected: "Выбрано", emptyHist: "Все демо-записи удалены. Нажми «Восстановить», чтобы вернуть список.", restore: "Восстановить список"
+      }
+    };
+
+    const INITIAL_HISTORY = [
+      { id: 1, name: "Voice_2026-11-22_19-30-00.mp3", dur: "0:08", size: "62 KB" },
+      { id: 2, name: "Voice_2026-11-22_18-45-12.mp3", dur: "0:14", size: "110 KB" },
+      { id: 3, name: "Voice_2026-11-22_16-20-05.mp3", dur: "0:27", size: "212 KB" },
+      { id: 4, name: "Voice_2026-11-22_14-05-41.mp3", dur: "1:05", size: "508 KB" }
+    ];
+
+    const state = {
+      lang: "en",
+      step: 0,
+      isRecording: false,
+      recordSec: 0,
+      hasRecorded: false,
+      recTimer: null,
+      droppedApps: new Set(),
+      transcribed: false,
+      transcribing: false,
+      targetLang: "ru",
+      translated: false,
+      history: INITIAL_HISTORY.map(x => ({ ...x })),
+      selectedId: 1,
+      playingId: null,
+      playTimer: null
+    };
+
+    function t() { return I18N[state.lang]; }
+
+    function navigateWithTransition(updateDOM, direction) {
+      if (!document.startViewTransition) {
+        updateDOM();
+        return;
+      }
+      document.startViewTransition({
+        update: updateDOM,
+        types: [direction]
+      });
+    }
+
+    function goToStep(nextStep) {
+      if (nextStep === state.step) return;
+      stopSimRecording(false);
+      stopSimPlayback();
+      const dir = nextStep > state.step ? "forward" : "backward";
+      navigateWithTransition(() => {
+        state.step = nextStep;
+        render();
+      }, dir);
+    }
+
+    function stopSimRecording(markDone = true) {
+      if (state.recTimer) {
+        clearInterval(state.recTimer);
+        state.recTimer = null;
+      }
+      if (state.isRecording && markDone) {
+        state.hasRecorded = true;
+      }
+      state.isRecording = false;
+    }
+
+    function toggleSimRecording() {
+      if (state.isRecording) {
+        stopSimRecording(true);
+        render();
+      } else {
+        state.isRecording = true;
+        state.recordSec = 0;
+        render();
+        state.recTimer = setInterval(() => {
+          state.recordSec += 0.1;
+          const timerEl = document.getElementById("rec-timer");
+          if (timerEl) timerEl.textContent = formatTimer(state.recordSec);
+          document.querySelectorAll(".waveform .bar").forEach(bar => {
+            bar.style.height = (6 + Math.random() * 28) + "px";
+          });
+        }, 100);
+      }
+    }
+
+    function stopSimPlayback() {
+      if (state.playTimer) {
+        clearTimeout(state.playTimer);
+        state.playTimer = null;
+      }
+      state.playingId = null;
+    }
+
+    function formatTimer(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const d = Math.floor((sec % 1) * 10);
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${d}`;
+    }
+
+    function render() {
+      const l = t();
+      document.getElementById("hero-sub").textContent = l.heroSub;
+      document.getElementById("dl-label").textContent = l.dl;
+      document.getElementById("win-title").textContent = l.stepOf(state.step);
+      document.getElementById("step-indicator").textContent = `${state.step + 1} / 4`;
+      document.getElementById("btn-prev").textContent = l.prev;
+      document.getElementById("btn-prev").disabled = state.step === 0;
+      document.getElementById("btn-next").textContent = state.step === 3 ? l.restart : l.next;
+
+      document.querySelectorAll(".step-pill").forEach((el, idx) => {
+        el.classList.toggle("active", idx === state.step);
+        el.classList.toggle("done", idx < state.step);
+        const key = el.querySelector(".step-txt").dataset.i18n;
+        el.querySelector(".step-txt").textContent = l[key];
+      });
+
+      const stage = document.getElementById("stage");
+      if (state.step === 0) renderStep1(stage, l);
+      else if (state.step === 1) renderStep2(stage, l);
+      else if (state.step === 2) renderStep3(stage, l);
+      else renderStep4(stage, l);
+    }
+
+    function renderStep1(stage, l) {
+      const bars = Array.from({ length: 24 }, () => `<div class="bar"></div>`).join("");
+      stage.innerHTML = `
+        <div class="step-header">
+          <h2>${l.s1Title}</h2>
+          <p>${l.s1Desc}</p>
+        </div>
+        <div class="card">
+          <div class="mic-bar">
+            <strong>🎙️ ${l.micLabel}</strong>
+            <div class="mic-controls">
+              <select aria-label="Microphone">
+                <option>🎧 EarPods Microphone (Wired USB)</option>
+                <option>💻 MacBook Pro Microphone (Built-in)</option>
+              </select>
+              <button class="btn-refresh" type="button" title="Refresh">↻</button>
+            </div>
+          </div>
+          <div class="deck-row">
+            <button id="rec-btn" class="record-btn ${state.isRecording ? "recording" : ""}" type="button">
+              <span style="font-size:22px">${state.isRecording ? "⏹" : "🎙️"}</span>
+              <span>${state.isRecording ? l.stop : l.record}</span>
+            </button>
+            <div>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <div id="rec-timer" class="timer ${state.isRecording ? "recording" : ""}">${formatTimer(state.recordSec)}</div>
+                <div class="waveform ${state.isRecording ? "active" : ""}">${bars}</div>
+              </div>
+              <div class="kbd-hint">
+                <span class="kbd">␣ Space</span>
+                <span>${l.spaceHint}</span>
+              </div>
+            </div>
+          </div>
+          <div class="denoise-row">
+            <label style="display:inline-flex;align-items:center;gap:6px">
+              <input type="checkbox" checked /> ${l.denoiseLabel}
+            </label>
+            ${state.hasRecorded ? `<span class="status-chip">✓ ${l.recordedOk}</span>` : ""}
+          </div>
+        </div>
+      `;
+      document.getElementById("rec-btn").addEventListener("click", toggleSimRecording);
+    }
+
+    function renderStep2(stage, l) {
+      const apps = [
+        { id: "antigravity", icon: "🚀", name: "Antigravity" },
+        { id: "telegram", icon: "✈️", name: "Telegram" },
+        { id: "slack", icon: "💬", name: "Slack" },
+        { id: "finder", icon: "📁", name: "Finder" }
+      ];
+      stage.innerHTML = `
+        <div class="step-header">
+          <h2>${l.s2Title}</h2>
+          <p>${l.s2Desc}</p>
+        </div>
+        <div class="dnd-layout">
+          <div class="card" style="display:flex;flex-direction:column;gap:12px;justify-content:center">
+            <div class="draggable-card" id="drag-card" draggable="true">
+              <div class="file-badge">🎵</div>
+              <div style="min-width:0">
+                <div class="file-name">Voice_2026-11-22_19-30-00.mp3</div>
+                <div style="font-size:12px;color:var(--brand);margin-top:3px">${l.dragHint}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn soft-blue" id="copy-mp3-btn" type="button">📋 ${l.copyMp3}</button>
+              <span class="dur-badge" style="align-self:center">62 KB • MP3 192 kbps</span>
+            </div>
+          </div>
+          <div class="drop-grid">
+            ${apps.map(a => {
+              const dropped = state.droppedApps.has(a.id);
+              return `
+                <div class="drop-target ${dropped ? "dropped" : ""}" data-app="${a.id}">
+                  <div class="drop-target-title">${a.icon} ${a.name}</div>
+                  <div class="drop-target-status">${dropped ? l.droppedOk : l.dropPrompt}</div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+      const card = document.getElementById("drag-card");
+      card.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", "Voice_2026-11-22_19-30-00.mp3");
+      });
+      document.querySelectorAll(".drop-target").forEach(el => {
+        const appId = el.dataset.app;
+        el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("over"); });
+        el.addEventListener("dragleave", () => el.classList.remove("over"));
+        el.addEventListener("drop", (e) => {
+          e.preventDefault();
+          el.classList.remove("over");
+          state.droppedApps.add(appId);
+          render();
+        });
+        el.addEventListener("click", () => {
+          state.droppedApps.add(appId);
+          render();
+        });
+      });
+      const copyBtn = document.getElementById("copy-mp3-btn");
+      copyBtn.addEventListener("click", () => {
+        copyBtn.textContent = l.copied;
+        setTimeout(() => { copyBtn.textContent = "📋 " + l.copyMp3; }, 1500);
+      });
+    }
+
+    function renderStep3(stage, l) {
+      const textVal = state.transcribed ? l.sampleOriginal : "";
+      const translatedVal = state.translated ? (l.sampleTranslations[state.targetLang] || l.sampleTranslations.en) : "";
+      stage.innerHTML = `
+        <div class="step-header">
+          <h2>${l.s3Title}</h2>
+          <p>${l.s3Desc}</p>
+        </div>
+        <div class="card">
+          <div class="stt-controls">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span class="dur-badge">Whisper large-v3-turbo (Offline)</span>
+              <button class="btn primary" id="btn-transcribe" type="button" ${state.transcribing ? "disabled" : ""}>
+                ✨ ${state.transcribing ? l.transcribing : l.transcribeBtn}
+              </button>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <select id="target-lang" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px">
+                ${["en", "ru", "de", "es", "fr"].map(code => `<option value="${code}" ${state.targetLang === code ? "selected" : ""}>${code.toUpperCase()}</option>`).join("")}
+              </select>
+              <button class="btn soft-blue" id="btn-translate" type="button" ${!state.transcribed ? "disabled" : ""}>
+                🌐 ${l.translateBtn}
+              </button>
+            </div>
+          </div>
+          <textarea class="text-box" readonly placeholder="...">${textVal}</textarea>
+          ${state.translated ? `
+            <div class="translation-panel">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <strong style="font-size:12px;color:var(--brand)">${l.translationTitle} (${state.targetLang.toUpperCase()})</strong>
+                <button class="btn" id="btn-copy-tr" type="button">📋 ${l.copyText}</button>
+              </div>
+              <div style="font-size:13px;line-height:1.5">${translatedVal}</div>
+            </div>
+          ` : ""}
+        </div>
+      `;
+      document.getElementById("btn-transcribe").addEventListener("click", () => {
+        state.transcribing = true;
+        state.translated = false;
+        render();
+        setTimeout(() => {
+          state.transcribing = false;
+          state.transcribed = true;
+          state.targetLang = state.lang === "en" ? "ru" : "en";
+          render();
+        }, 650);
+      });
+      document.getElementById("target-lang").addEventListener("change", (e) => {
+        state.targetLang = e.target.value;
+        if (state.translated) render();
+      });
+      document.getElementById("btn-translate").addEventListener("click", () => {
+        state.translated = true;
+        render();
+      });
+      const copyTr = document.getElementById("btn-copy-tr");
+      if (copyTr) {
+        copyTr.addEventListener("click", () => {
+          if (navigator.clipboard) navigator.clipboard.writeText(translatedVal).catch(() => {});
+          copyTr.textContent = l.copied;
+          setTimeout(() => { copyTr.textContent = "📋 " + l.copyText; }, 1500);
+        });
+      }
+    }
+
+    function renderStep4(stage, l) {
+      const rows = state.history.length ? state.history.map(item => {
+        const playing = state.playingId === item.id;
+        const selected = state.selectedId === item.id;
+        return `
+          <div class="history-row ${selected ? "selected" : ""}">
+            <button class="play-btn" data-play="${item.id}" type="button" aria-label="Play">${playing ? "⏸" : "▶"}</button>
+            <div class="file-name">${item.name}</div>
+            <span class="dur-badge">${item.dur}</span>
+            <span class="dur-badge">${item.size}</span>
+            <div style="flex:1"></div>
+            <button class="btn ${selected ? "soft-blue" : ""}" data-select="${item.id}" type="button">${selected ? l.selected : l.select}</button>
+            <button class="del-x" data-del="${item.id}" type="button" title="Delete">✕</button>
+          </div>
+        `;
+      }).join("") : `
+        <div style="text-align:center;padding:24px;color:var(--muted)">
+          <p>${l.emptyHist}</p>
+          <button class="btn soft-blue" id="btn-restore" type="button">${l.restore}</button>
+        </div>
+      `;
+
+      stage.innerHTML = `
+        <div class="step-header">
+          <h2>${l.s4Title}</h2>
+          <p>${l.s4Desc}</p>
+        </div>
+        <div class="card">
+          <div class="history-list">${rows}</div>
+        </div>
+      `;
+
+      stage.querySelectorAll("[data-play]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = Number(btn.dataset.play);
+          if (state.playingId === id) {
+            stopSimPlayback();
+          } else {
+            stopSimPlayback();
+            state.playingId = id;
+            state.playTimer = setTimeout(() => { state.playingId = null; render(); }, 3000);
+          }
+          render();
+        });
+      });
+      stage.querySelectorAll("[data-select]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedId = Number(btn.dataset.select);
+          render();
+        });
+      });
+      stage.querySelectorAll("[data-del]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = Number(btn.dataset.del);
+          if (state.playingId === id) stopSimPlayback();
+          state.history = state.history.filter(x => x.id !== id);
+          if (state.selectedId === id) state.selectedId = state.history[0]?.id ?? null;
+          render();
+        });
+      });
+      const restoreBtn = document.getElementById("btn-restore");
+      if (restoreBtn) {
+        restoreBtn.addEventListener("click", () => {
+          state.history = INITIAL_HISTORY.map(x => ({ ...x }));
+          state.selectedId = 1;
+          render();
+        });
+      }
+    }
+
+    // Wire stepper, footer nav, language toggle & Spacebar hotkey on Step 1
+    document.querySelectorAll(".step-pill").forEach(btn => {
+      btn.addEventListener("click", () => goToStep(Number(btn.dataset.step)));
+    });
+    document.getElementById("btn-prev").addEventListener("click", () => {
+      if (state.step > 0) goToStep(state.step - 1);
+    });
+    document.getElementById("btn-next").addEventListener("click", () => {
+      goToStep(state.step < 3 ? state.step + 1 : 0);
+    });
+    document.getElementById("lang-en").addEventListener("click", () => {
+      state.lang = "en";
+      document.getElementById("lang-en").classList.add("active");
+      document.getElementById("lang-ru").classList.remove("active");
+      render();
+    });
+    document.getElementById("lang-ru").addEventListener("click", () => {
+      state.lang = "ru";
+      document.getElementById("lang-ru").classList.add("active");
+      document.getElementById("lang-en").classList.remove("active");
+      render();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (state.step === 0 && e.code === "Space" && !e.repeat && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+        e.preventDefault();
+        toggleSimRecording();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
