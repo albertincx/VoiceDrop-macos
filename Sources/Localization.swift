@@ -13,6 +13,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .ru: return "🇷🇺 Русский"
         }
     }
+
+    var shortName: String {
+        switch self {
+        case .en: return "EN"
+        case .ru: return "RU"
+        }
+    }
 }
 
 class Localization: ObservableObject {

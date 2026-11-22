@@ -9,6 +9,7 @@ Icon
 *.app/
 *.dSYM/
 build/
+.build/
 DerivedData/
 *.ipa
 *.pkg

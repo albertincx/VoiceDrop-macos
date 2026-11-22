@@ -10,16 +10,25 @@ CONTENTS_DIR="${APP_BUNDLE}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 
-echo "🔨 Сборка ${APP_NAME}..."
+# Use release mode in CI or when --release is passed; fast incremental debug mode locally
+BUILD_CONFIG="debug"
+if [ "${CI:-}" = "true" ] || [ "${1:-}" = "--release" ]; then
+    BUILD_CONFIG="release"
+fi
 
-# Clean previous build
-rm -rf "${APP_BUNDLE}"
+echo "🔨 Сборка ${APP_NAME} (${BUILD_CONFIG})..."
 
-# Create bundle directory layout
+echo "⚙️ Инкрементальная компиляция Swift (SwiftPM)..."
+swift build -c "${BUILD_CONFIG}"
+
+BIN_PATH="$(swift build -c "${BUILD_CONFIG}" --show-bin-path)/${APP_NAME}"
+
+# Create bundle directory layout (update in-place instead of wiping everything)
 mkdir -p "${MACOS_DIR}"
 mkdir -p "${RESOURCES_DIR}"
 
-# Copy plist and resources
+# Copy binary, plist and resources
+cp "${BIN_PATH}" "${MACOS_DIR}/${APP_NAME}"
 cp Resources/Info.plist "${CONTENTS_DIR}/Info.plist"
 if [ -f Resources/AppIcon.icns ]; then
     cp Resources/AppIcon.icns "${RESOURCES_DIR}/AppIcon.icns"
@@ -34,30 +43,6 @@ if [ -f convert_mp3.py ]; then
     cp convert_mp3.py "${RESOURCES_DIR}/convert_mp3.py"
     chmod +x "${RESOURCES_DIR}/convert_mp3.py"
 fi
-
-# Compile Swift sources
-SWIFT_FILES=(
-    Sources/Localization.swift
-    Sources/AudioDeviceManager.swift
-    Sources/AudioRecorder.swift
-    Sources/AudioPlayer.swift
-    Sources/TranscriptionService.swift
-    Sources/DraggableFileView.swift
-    Sources/WaveformVisualizer.swift
-    Sources/ContentView.swift
-    Sources/AppDelegate.swift
-    Sources/main.swift
-)
-
-echo "⚙️ Компиляция Swift файлов..."
-swiftc -O \
-    -target arm64-apple-macosx14.0 \
-    -framework Cocoa \
-    -framework AVFoundation \
-    -framework SwiftUI \
-    -framework Combine \
-    "${SWIFT_FILES[@]}" \
-    -o "${MACOS_DIR}/${APP_NAME}"
 
 echo "🔐 Локальная подпись бандла с правами доступа к микрофону..."
 codesign --force --deep --sign - --entitlements Resources/VoiceDrop.entitlements "${APP_BUNDLE}"

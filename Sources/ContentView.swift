@@ -111,11 +111,11 @@ struct ContentView: View {
                 // UI Language Switcher
                 Picker("", selection: $loc.currentLanguage) {
                     ForEach(AppLanguage.allCases) { lang in
-                        Text(lang.displayName).tag(lang)
+                        Text(lang.shortName).tag(lang)
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 175)
+                .frame(width: 76)
 
                 Button(action: {
                     recorder.selectExternalFile()
@@ -268,7 +268,12 @@ struct ContentView: View {
                     deviceManager.refreshDevices()
                 }) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.blue)
+                        .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
                 .help(loc.t(.refreshMicsHelp))
@@ -286,7 +291,7 @@ struct ContentView: View {
                 .help(loc.t(.resetMicAccessHelp))
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.85))
             .cornerRadius(8)
             .overlay(
@@ -294,66 +299,71 @@ struct ContentView: View {
                     .stroke(Color.gray.opacity(0.2), lineWidth: 1)
             )
 
-            // Big Record Button
-            ZStack {
-                // Pulsing ring when recording
-                if recorder.isRecording {
-                    Circle()
-                        .stroke(Color.red.opacity(0.35), lineWidth: 8)
-                        .frame(width: 108, height: 108)
-                        .scaleEffect(1.0 + CGFloat(recorder.currentAudioLevel) * 0.3)
-                        .animation(.easeOut(duration: 0.1), value: recorder.currentAudioLevel)
-                }
-
-                Button(action: {
-                    recorder.toggleRecording()
-                }) {
-                    ZStack {
+            // Compact Horizontal Recording Deck
+            HStack(spacing: 20) {
+                // Record Button
+                ZStack {
+                    if recorder.isRecording {
                         Circle()
-                            .fill(recorder.isRecording ? Color.red : Color.blue)
-                            .frame(width: 88, height: 88)
-                            .shadow(color: (recorder.isRecording ? Color.red : Color.blue).opacity(0.4), radius: 10, x: 0, y: 5)
+                            .stroke(Color.red.opacity(0.35), lineWidth: 6)
+                            .frame(width: 82, height: 82)
+                            .scaleEffect(1.0 + CGFloat(recorder.currentAudioLevel) * 0.25)
+                            .animation(.easeOut(duration: 0.1), value: recorder.currentAudioLevel)
+                    }
 
-                        VStack(spacing: 4) {
-                            Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.white)
+                    Button(action: {
+                        recorder.toggleRecording()
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(recorder.isRecording ? Color.red : Color.blue)
+                                .frame(width: 68, height: 68)
+                                .shadow(color: (recorder.isRecording ? Color.red : Color.blue).opacity(0.4), radius: 8, x: 0, y: 4)
 
-                            Text(recorder.isRecording ? loc.t(.stopButton) : loc.t(.recordButton))
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
+                            VStack(spacing: 3) {
+                                Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.white)
+
+                                Text(recorder.isRecording ? loc.t(.stopButton) : loc.t(.recordButton))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .frame(width: 84, height: 84)
+
+                // Duration, Waveform & Shortcut Hint
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 14) {
+                        Text(formattedDuration(recorder.recordingDuration))
+                            .font(.system(size: 26, weight: .medium, design: .monospaced))
+                            .foregroundColor(recorder.isRecording ? .red : .primary)
+
+                        WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording)
+                    }
+
+                    HStack(spacing: 6) {
+                        Text(loc.t(.spaceKey))
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(NSColor.controlColor))
+                            .cornerRadius(4)
+                        Text(recorder.isRecording ? loc.t(.spacebarHintRecording) : loc.t(.spacebarHintIdle))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
             }
-
-            // Duration Display
-            Text(formattedDuration(recorder.recordingDuration))
-                .font(.system(size: 28, weight: .medium, design: .monospaced))
-                .foregroundColor(recorder.isRecording ? .red : .primary)
-
-            // Waveform visualizer
-            WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording)
-
-            Text(recorder.isRecording ? loc.t(.recordingActiveHint) : loc.t(.recordingIdleHint))
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-
-            // Spacebar shortcut hint
-            HStack(spacing: 6) {
-                Text(loc.t(.spaceKey))
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(NSColor.controlColor))
-                    .cornerRadius(4)
-                Text(recorder.isRecording ? loc.t(.spacebarHintRecording) : loc.t(.spacebarHintIdle))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+            .padding(.horizontal, 12)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
