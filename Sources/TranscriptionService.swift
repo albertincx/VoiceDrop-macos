@@ -12,8 +12,26 @@ class TranscriptionService: ObservableObject {
     @Published var selectedModel: String = "large-v3-turbo"
     @Published var selectedLanguage: String = "auto"
 
+    @Published var isTranslating: Bool = false
+    @Published var translatedText: String = ""
+    @Published var targetTranslateLanguage: String = "en"
+    @Published var copiedTranslatedFeedback: Bool = false
+
     let modelKeys = ["large-v3-turbo", "tiny"]
     let languageKeys = ["auto", "en", "ru", "de", "es", "fr"]
+    let translateTargetKeys = ["en", "ru", "de", "es", "fr", "zh-CN"]
+
+    func translateTargetShortName(for key: String) -> String {
+        switch key {
+        case "en": return "EN"
+        case "ru": return "RU"
+        case "de": return "DE"
+        case "es": return "ES"
+        case "fr": return "FR"
+        case "zh-CN": return "ZH"
+        default: return key.uppercased()
+        }
+    }
 
     func modelDisplayName(for key: String, lang: AppLanguage = Localization.shared.currentLanguage) -> String {
         switch key {
@@ -167,7 +185,13 @@ class TranscriptionService: ObservableObject {
                     DispatchQueue.main.async {
                         self.isTranscribing = false
                         self.transcribedText = text
+                        self.translatedText = ""
                         self.detectedLanguage = lang
+                        if lang.lowercased() == "en" {
+                            self.targetTranslateLanguage = "ru"
+                        } else if !lang.isEmpty {
+                            self.targetTranslateLanguage = "en"
+                        }
                         self.statusMessage = Localization.shared.t(.statusSuccess(lang))
                     }
                 } else if !rawOutput.isEmpty {
@@ -216,6 +240,83 @@ class TranscriptionService: ObservableObject {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.copiedFeedback = false
+        }
+    }
+
+    func translateText() {
+        let source = transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !source.isEmpty, !isTranslating else { return }
+
+        var components = URLComponents(string: "https://translate.googleapis.com/translate_a/single")
+        components?.queryItems = [
+            URLQueryItem(name: "client", value: "gtx"),
+            URLQueryItem(name: "sl", value: "auto"),
+            URLQueryItem(name: "tl", value: targetTranslateLanguage),
+            URLQueryItem(name: "dt", value: "t"),
+            URLQueryItem(name: "q", value: source)
+        ]
+
+        guard let url = components?.url else { return }
+
+        DispatchQueue.main.async {
+            self.isTranslating = true
+            self.errorMessage = nil
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.isTranslating = false
+                    let isEn = Localization.shared.currentLanguage == .en
+                    self.errorMessage = isEn
+                        ? "Translation error: \(error.localizedDescription)"
+                        : "Ошибка перевода: \(error.localizedDescription)"
+                }
+                return
+            }
+
+            guard let data = data,
+                  let root = try? JSONSerialization.jsonObject(with: data, options: []) as? [Any],
+                  let sentences = root.first as? [Any] else {
+                DispatchQueue.main.async {
+                    self.isTranslating = false
+                    let isEn = Localization.shared.currentLanguage == .en
+                    self.errorMessage = isEn
+                        ? "Failed to parse Google Translate response"
+                        : "Не удалось разобрать ответ Google Translate"
+                }
+                return
+            }
+
+            let translated = sentences.compactMap { item -> String? in
+                guard let pair = item as? [Any], let chunk = pair.first as? String else { return nil }
+                return chunk
+            }.joined()
+
+            DispatchQueue.main.async {
+                self.isTranslating = false
+                self.translatedText = translated
+            }
+        }.resume()
+    }
+
+    func copyTranslatedToClipboard() {
+        guard !translatedText.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(translatedText, forType: .string)
+
+        DispatchQueue.main.async {
+            self.copiedTranslatedFeedback = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.copiedTranslatedFeedback = false
         }
     }
 }

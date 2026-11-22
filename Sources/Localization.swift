@@ -107,6 +107,9 @@ class Localization: ObservableObject {
         case transcriptionResultLabel
         case copyTextButton
         case copiedTextDone
+        case translateButton
+        case translatingProgress
+        case translationResultLabel
 
         case recentRecordingsTitle
         case selectRecordingButton
@@ -302,6 +305,12 @@ class Localization: ObservableObject {
                 return lang == .en ? "Copy Text" : "Копировать"
             case .copiedTextDone:
                 return lang == .en ? "Copied!" : "Скопировано!"
+            case .translateButton:
+                return lang == .en ? "Translate" : "Перевести"
+            case .translatingProgress:
+                return lang == .en ? "Translating..." : "Перевод..."
+            case .translationResultLabel:
+                return lang == .en ? "Translation:" : "Перевод:"
 
             case .recentRecordingsTitle:
                 return lang == .en ? "Recent Recordings:" : "Недавние записи:"

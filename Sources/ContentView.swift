@@ -640,6 +640,39 @@ struct ContentView: View {
 
                     Spacer()
 
+                    // Target Translate Language Picker + Translate Button (Google Translate API)
+                    Picker("", selection: $transcriber.targetTranslateLanguage) {
+                        ForEach(transcriber.translateTargetKeys, id: \.self) { key in
+                            Text(transcriber.translateTargetShortName(for: key)).tag(key)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 58)
+                    .disabled(transcriber.transcribedText.isEmpty || transcriber.isTranslating)
+
+                    Button(action: {
+                        transcriber.translateText()
+                    }) {
+                        HStack(spacing: 5) {
+                            if transcriber.isTranslating {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text(loc.t(.translatingProgress))
+                            } else {
+                                Image(systemName: "globe")
+                                Text(loc.t(.translateButton))
+                            }
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(transcriber.transcribedText.isEmpty || transcriber.isTranslating)
+
                     // Copy Button
                     Button(action: {
                         transcriber.copyToClipboard()
@@ -672,6 +705,46 @@ struct ContentView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
+
+                if !transcriber.translatedText.isEmpty {
+                    HStack {
+                        Text("\(loc.t(.translationResultLabel)) (\(transcriber.translateTargetShortName(for: transcriber.targetTranslateLanguage)))")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.blue)
+
+                        Spacer()
+
+                        Button(action: {
+                            transcriber.copyTranslatedToClipboard()
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: transcriber.copiedTranslatedFeedback ? "checkmark" : "doc.on.doc")
+                                    .foregroundColor(transcriber.copiedTranslatedFeedback ? .green : .primary)
+                                Text(transcriber.copiedTranslatedFeedback ? loc.t(.copiedTextDone) : loc.t(.copyTextButton))
+                                    .fontWeight(transcriber.copiedTranslatedFeedback ? .bold : .regular)
+                                    .foregroundColor(transcriber.copiedTranslatedFeedback ? .green : .primary)
+                            }
+                            .font(.system(size: 12))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(transcriber.copiedTranslatedFeedback ? Color.green.opacity(0.15) : Color(NSColor.controlBackgroundColor))
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 4)
+
+                    TextEditor(text: $transcriber.translatedText)
+                        .font(.system(size: 13, design: .default))
+                        .frame(minHeight: 80, maxHeight: 160)
+                        .padding(6)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                        )
+                }
             }
             }
         }
@@ -720,6 +793,16 @@ struct ContentView: View {
                                 .font(.system(size: 12, weight: isSelected ? .bold : .regular))
                                 .lineLimit(1)
 
+                            if let dur = recorder.recordingDurations[fileURL] {
+                                Text(formattedShortDuration(dur))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.gray.opacity(0.14))
+                                    .cornerRadius(4)
+                            }
+
                             Spacer()
 
                             Button(action: {
@@ -766,5 +849,12 @@ struct ContentView: View {
         let seconds = Int(time) % 60
         let tenths = Int((time.truncatingRemainder(dividingBy: 1)) * 10)
         return String(format: "%02d:%02d.%d", minutes, seconds, tenths)
+    }
+
+    private func formattedShortDuration(_ time: TimeInterval) -> String {
+        let totalSeconds = Int(time.rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

@@ -15,6 +15,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var currentRecordingURL: URL?
     @Published var currentMP3URL: URL?
     @Published var recentRecordings: [URL] = []
+    @Published var recordingDurations: [URL: TimeInterval] = [:]
     @Published var noiseSuppressionEnabled: Bool = true
     @Published var denoiseStrength: Double = 1.8 // 1.2 (Mild), 1.8 (Studio), 2.5 (Strong)
     @Published var isDenoised: Bool = false
@@ -102,9 +103,40 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     self.currentRecordingURL = first
                     self.currentMP3URL = first
                 }
+                self.loadDurationsIfNeeded(for: sorted)
             }
         } catch {
             print("Failed to load recordings: \(error)")
+        }
+    }
+
+    private func loadDurationsIfNeeded(for urls: [URL]) {
+        let missing = urls.filter { self.recordingDurations[$0] == nil }
+        guard !missing.isEmpty else { return }
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            var computed: [URL: TimeInterval] = [:]
+            for url in missing {
+                let asset = AVURLAsset(url: url)
+                let seconds = CMTimeGetSeconds(asset.duration)
+                if seconds.isFinite && seconds >= 0 {
+                    computed[url] = seconds
+                }
+                // Flush in small batches so visible rows update immediately
+                if computed.count >= 20 {
+                    let batch = computed
+                    computed.removeAll()
+                    DispatchQueue.main.async {
+                        self?.recordingDurations.merge(batch) { _, new in new }
+                    }
+                }
+            }
+            if !computed.isEmpty {
+                let batch = computed
+                DispatchQueue.main.async {
+                    self?.recordingDurations.merge(batch) { _, new in new }
+                }
+            }
         }
     }
 
