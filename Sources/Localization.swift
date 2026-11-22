@@ -107,6 +107,9 @@ class Localization: ObservableObject {
         case deleteRecordingHelp
         case playRecordingHelp
         case pauseRecordingHelp
+        case micPermissionDeniedError
+        case noMicSignalWarning
+        case silentRecordingDiscardedError
 
         case spaceKey
         case statusReadyToTranscribe
@@ -305,6 +308,18 @@ class Localization: ObservableObject {
                 return lang == .en ? "Play recording" : "Прослушать запись"
             case .pauseRecordingHelp:
                 return lang == .en ? "Pause playback" : "Пауза"
+            case .micPermissionDeniedError:
+                return lang == .en
+                    ? "Microphone access is denied in macOS settings. Click 'Reset Access' to re-enable."
+                    : "Доступ к микрофону запрещён в настройках macOS. Нажмите «Сброс доступа»."
+            case .noMicSignalWarning:
+                return lang == .en
+                    ? "No audio signal from microphone (silence). Check input device or click 'Reset Access'."
+                    : "Нет сигнала с микрофона (тишина). Проверьте микрофон или нажмите «Сброс доступа»."
+            case .silentRecordingDiscardedError:
+                return lang == .en
+                    ? "Recording was completely silent (no microphone signal) and was discarded. Check microphone or click 'Reset Access'."
+                    : "Запись оказалась полностью пустой (нет сигнала с микрофона) и была отменена. Проверьте микрофон или нажмите «Сброс доступа»."
             }
         }
     }

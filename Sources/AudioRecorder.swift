@@ -21,12 +21,16 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var errorMessage: String?
     @Published var micPermissionGranted: Bool = true
 
+    var onBeforeStartRecording: (() -> Void)?
     var onRecordingFinished: ((URL) -> Void)?
 
     private var audioRecorder: AVAudioRecorder?
     private var meterTimer: Timer?
     private var recordingTimer: Timer?
     private var recordingStartTime: Date?
+    private var hasReceivedAudioSignal: Bool = false
+    private var silentTicks: Int = 0
+    private var previousRecordingURL: URL?
 
     var recordingsDirectory: URL {
         let bundleFolder = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("Recordings", isDirectory: true)
@@ -170,8 +174,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     self.startRecording()
                 } else {
                     self.micPermissionGranted = false
-                    self.errorMessage = "Микрофон отключен в настройках системы. Нажмите 'Сбросить и запросить окно'."
-                    self.startRecording()
+                    self.errorMessage = Localization.shared.t(.micPermissionDeniedError)
                 }
             }
         }
@@ -179,9 +182,13 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
     func startRecording() {
         guard !isRecording else { return }
+        onBeforeStartRecording?()
         errorMessage = nil
         isDenoised = false
+        previousRecordingURL = currentRecordingURL
         currentMP3URL = nil
+        hasReceivedAudioSignal = false
+        silentTicks = 0
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
@@ -228,8 +235,22 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 guard let self = self, let recorder = self.audioRecorder, recorder.isRecording else { return }
                 recorder.updateMeters()
                 let avg = recorder.averagePower(forChannel: 0)
+                let peak = recorder.peakPower(forChannel: 0)
                 let normalized = min(max((avg + 50.0) / 50.0, 0.0), 1.0)
                 self.currentAudioLevel = normalized
+
+                if peak > -120.0 {
+                    self.hasReceivedAudioSignal = true
+                    self.silentTicks = 0
+                    if self.errorMessage == Localization.shared.t(.noMicSignalWarning) {
+                        self.errorMessage = nil
+                    }
+                } else if !self.hasReceivedAudioSignal {
+                    self.silentTicks += 1
+                    if self.silentTicks == 30 {
+                        self.errorMessage = Localization.shared.t(.noMicSignalWarning)
+                    }
+                }
 
                 var wf = self.audioWaveform
                 wf.removeFirst()
@@ -239,6 +260,14 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         } catch {
             errorMessage = "Ошибка записи: \(error.localizedDescription)"
         }
+    }
+
+    private func isWAVFileCompletelySilent(_ url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url), data.count > 44 else {
+            return true
+        }
+        // Check PCM samples after the 44-byte WAV header
+        return data.dropFirst(44).allSatisfy { $0 == 0 }
     }
 
     func stopRecording() {
@@ -259,6 +288,19 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             self.audioWaveform = Array(repeating: 0.1, count: 24)
 
             guard let url = savedURL else { return }
+
+            // Guard against silent/zero-filled recordings (e.g., revoked TCC mic permission or dead input device)
+            if self.isWAVFileCompletelySilent(url) {
+                try? FileManager.default.removeItem(at: url)
+                self.currentRecordingURL = self.previousRecordingURL ?? self.recentRecordings.first
+                if let current = self.currentRecordingURL {
+                    let mp3Candidate = current.deletingPathExtension().appendingPathExtension("mp3")
+                    self.currentMP3URL = FileManager.default.fileExists(atPath: mp3Candidate.path) ? mp3Candidate : nil
+                }
+                self.errorMessage = Localization.shared.t(.silentRecordingDiscardedError)
+                self.loadRecentRecordings()
+                return
+            }
 
             if self.noiseSuppressionEnabled {
                 self.applyDenoise(fileURL: url, strength: self.denoiseStrength) { [weak self] cleanURL in

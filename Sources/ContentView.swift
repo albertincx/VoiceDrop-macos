@@ -10,6 +10,7 @@ struct ContentView: View {
 
     @State private var selectedTab: Int = 0
     @State private var showSettings: Bool = false
+    @State private var isTranscriptionExpanded: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,6 +55,9 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            recorder.onBeforeStartRecording = {
+                player.stop()
+            }
             recorder.onRecordingFinished = { url in
                 player.loadAudio(url: url)
             }
@@ -531,23 +535,42 @@ struct ContentView: View {
 
     // MARK: - Local Whisper Transcription Section
     private var transcriptionSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: isTranscriptionExpanded ? 14 : 0) {
             HStack {
-                Label(loc.t(.localSpeechRecognitionTitle), systemImage: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
-
-                Spacer()
-
-                // Spoken Language picker
-                Picker(loc.t(.speechLanguageLabel), selection: $transcriber.selectedLanguage) {
-                    ForEach(transcriber.languageKeys, id: \.self) { key in
-                        Text(transcriber.languageDisplayName(for: key, lang: loc.currentLanguage)).tag(key)
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isTranscriptionExpanded.toggle()
                     }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: isTranscriptionExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 12)
+
+                        Label(loc.t(.localSpeechRecognitionTitle), systemImage: "sparkles")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
                 }
-                .pickerStyle(.menu)
-                .frame(width: 220)
+                .buttonStyle(.plain)
+
+                if isTranscriptionExpanded {
+                    // Spoken Language picker
+                    Picker(loc.t(.speechLanguageLabel), selection: $transcriber.selectedLanguage) {
+                        ForEach(transcriber.languageKeys, id: \.self) { key in
+                            Text(transcriber.languageDisplayName(for: key, lang: loc.currentLanguage)).tag(key)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 220)
+                }
             }
 
+            if isTranscriptionExpanded {
             // Model selector & Transcribe Button
             HStack(spacing: 12) {
                 Picker(loc.t(.modelLabel), selection: $transcriber.selectedModel) {
@@ -640,8 +663,9 @@ struct ContentView: View {
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
             }
+            }
         }
-        .padding(16)
+        .padding(isTranscriptionExpanded ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(NSColor.controlBackgroundColor).opacity(0.8))
