@@ -85,7 +85,8 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     func loadRecentRecordings() {
         do {
             let files = try FileManager.default.contentsOfDirectory(at: recordingsDirectory, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])
-            let sorted = files.filter { ["wav", "m4a", "mp3"].contains($0.pathExtension.lowercased()) }
+            // Keep only MP3 files in history (no WAV)
+            let sorted = files.filter { $0.pathExtension.lowercased() == "mp3" }
                 .sorted {
                     let date1 = (try? $0.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
                     let date2 = (try? $1.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
@@ -95,14 +96,42 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 self.recentRecordings = sorted
                 if self.currentRecordingURL == nil, let first = sorted.first {
                     self.currentRecordingURL = first
-                    let mp3Candidate = first.deletingPathExtension().appendingPathExtension("mp3")
-                    if FileManager.default.fileExists(atPath: mp3Candidate.path) {
-                        self.currentMP3URL = mp3Candidate
-                    }
+                    self.currentMP3URL = first
                 }
             }
         } catch {
             print("Failed to load recordings: \(error)")
+        }
+    }
+
+    func deleteRecording(_ url: URL) {
+        let baseURL = url.deletingPathExtension()
+        let wavURL = baseURL.appendingPathExtension("wav")
+        let mp3URL = baseURL.appendingPathExtension("mp3")
+        let candidates = Set([url, wavURL, mp3URL])
+
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                try? FileManager.default.removeItem(at: candidate)
+            }
+        }
+
+        let wasCurrent = (currentRecordingURL != nil && candidates.contains(currentRecordingURL!))
+            || (currentMP3URL != nil && candidates.contains(currentMP3URL!))
+
+        DispatchQueue.main.async {
+            self.recentRecordings.removeAll { candidates.contains($0) }
+            if wasCurrent {
+                if let next = self.recentRecordings.first {
+                    self.currentRecordingURL = next
+                    self.currentMP3URL = next
+                } else {
+                    self.currentRecordingURL = nil
+                    self.currentMP3URL = nil
+                }
+                self.isDenoised = false
+            }
+            self.loadRecentRecordings()
         }
     }
 

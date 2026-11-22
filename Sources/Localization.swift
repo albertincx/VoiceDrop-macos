@@ -103,6 +103,10 @@ class Localization: ObservableObject {
 
         case recentRecordingsTitle
         case selectRecordingButton
+        case deleteRecordingButton
+        case deleteRecordingHelp
+        case playRecordingHelp
+        case pauseRecordingHelp
 
         case spaceKey
         case statusReadyToTranscribe
@@ -293,6 +297,14 @@ class Localization: ObservableObject {
                 return lang == .en ? "Recent Recordings:" : "Недавние записи:"
             case .selectRecordingButton:
                 return lang == .en ? "Select" : "Выбрать"
+            case .deleteRecordingButton:
+                return lang == .en ? "Delete" : "Удалить"
+            case .deleteRecordingHelp:
+                return lang == .en ? "Delete recording permanently" : "Удалить запись полностью"
+            case .playRecordingHelp:
+                return lang == .en ? "Play recording" : "Прослушать запись"
+            case .pauseRecordingHelp:
+                return lang == .en ? "Pause playback" : "Пауза"
             }
         }
     }

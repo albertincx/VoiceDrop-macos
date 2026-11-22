@@ -37,7 +37,7 @@ struct ContentView: View {
                     }
 
                     // Recent History
-                    if recorder.recentRecordings.count > 1 {
+                    if !recorder.recentRecordings.isEmpty {
                         recentHistorySection
                     }
                 }
@@ -49,6 +49,8 @@ struct ContentView: View {
         .onChange(of: recorder.currentRecordingURL) { _, newURL in
             if let url = newURL {
                 player.loadAudio(url: url)
+            } else {
+                player.reset()
             }
         }
         .onAppear {
@@ -451,6 +453,21 @@ struct ContentView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.green)
                 }
+
+                // Delete current recording permanently
+                Button(action: {
+                    player.stop()
+                    recorder.deleteRecording(fileURL)
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                        Text(loc.t(.deleteRecordingButton))
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundColor(.red)
+                }
+                .buttonStyle(.bordered)
+                .help(loc.t(.deleteRecordingHelp))
             }
 
             // In-line Player Preview
@@ -642,31 +659,66 @@ struct ContentView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
-            ForEach(recorder.recentRecordings.prefix(5), id: \.self) { fileURL in
-                HStack {
-                    Image(systemName: "waveform")
-                        .foregroundColor(fileURL == recorder.currentRecordingURL ? .blue : .secondary)
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    ForEach(recorder.recentRecordings, id: \.self) { fileURL in
+                        let isSelected = fileURL == recorder.currentRecordingURL || fileURL == recorder.currentMP3URL
+                        let isPlayingThis = player.isPlaying && player.currentURL == fileURL
+                        HStack(spacing: 8) {
+                            Button(action: {
+                                if isPlayingThis {
+                                    player.pause()
+                                } else {
+                                    if player.currentURL != fileURL {
+                                        player.loadAudio(url: fileURL)
+                                    }
+                                    player.play()
+                                }
+                            }) {
+                                Image(systemName: isPlayingThis ? "pause.circle.fill" : "play.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.plain)
+                            .help(isPlayingThis ? loc.t(.pauseRecordingHelp) : loc.t(.playRecordingHelp))
 
-                    Text(fileURL.lastPathComponent)
-                        .font(.system(size: 12, weight: fileURL == recorder.currentRecordingURL ? .bold : .regular))
-                        .lineLimit(1)
+                            Text(fileURL.lastPathComponent)
+                                .font(.system(size: 12, weight: isSelected ? .bold : .regular))
+                                .lineLimit(1)
 
-                    Spacer()
+                            Spacer()
 
-                    Button(action: {
-                        recorder.currentRecordingURL = fileURL
-                        player.loadAudio(url: fileURL)
-                    }) {
-                        Text(loc.t(.selectRecordingButton))
-                            .font(.system(size: 11))
+                            Button(action: {
+                                recorder.currentRecordingURL = fileURL
+                                recorder.currentMP3URL = fileURL
+                                player.loadAudio(url: fileURL)
+                            }) {
+                                Text(loc.t(.selectRecordingButton))
+                                    .font(.system(size: 11))
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                if isSelected || player.currentURL == fileURL {
+                                    player.stop()
+                                }
+                                recorder.deleteRecording(fileURL)
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help(loc.t(.deleteRecordingHelp))
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(isSelected ? Color.blue.opacity(0.08) : Color.clear)
+                        .cornerRadius(6)
                     }
-                    .buttonStyle(.bordered)
                 }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .background(fileURL == recorder.currentRecordingURL ? Color.blue.opacity(0.08) : Color.clear)
-                .cornerRadius(6)
             }
+            .frame(maxHeight: 220)
         }
         .padding(14)
         .background(

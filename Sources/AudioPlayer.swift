@@ -85,6 +85,14 @@ class AudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         currentTime = 0.0
     }
 
+    func reset() {
+        stop()
+        player = nil
+        currentURL = nil
+        duration = 0.0
+        playbackError = nil
+    }
+
     func seek(to time: TimeInterval) {
         player?.currentTime = time
         currentTime = time
