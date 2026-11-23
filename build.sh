@@ -43,6 +43,10 @@ if [ -f convert_mp3.py ]; then
     cp convert_mp3.py "${RESOURCES_DIR}/convert_mp3.py"
     chmod +x "${RESOURCES_DIR}/convert_mp3.py"
 fi
+if [ -f convert_ogg.py ]; then
+    cp convert_ogg.py "${RESOURCES_DIR}/convert_ogg.py"
+    chmod +x "${RESOURCES_DIR}/convert_ogg.py"
+fi
 
 echo "🔐 Локальная подпись бандла с правами доступа к микрофону..."
 codesign --force --deep --sign - --entitlements Resources/VoiceDrop.entitlements "${APP_BUNDLE}"

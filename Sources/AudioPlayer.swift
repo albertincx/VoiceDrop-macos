@@ -11,9 +11,47 @@ class AudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     private var player: AVAudioPlayer?
     private var timer: Timer?
+    private var tempPlaybackURL: URL?
+
+    deinit {
+        cleanupTempPlaybackFile()
+    }
+
+    private func cleanupTempPlaybackFile() {
+        if let temp = tempPlaybackURL {
+            try? FileManager.default.removeItem(at: temp)
+            tempPlaybackURL = nil
+        }
+    }
+
+    private func decodeOGGToTempWAV(url: URL) -> URL? {
+        let ffmpegPaths = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]
+        guard let ffmpeg = ffmpegPaths.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            return nil
+        }
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voicedrop_play_\(UUID().uuidString).wav")
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: ffmpeg)
+        process.arguments = ["-y", "-i", url.path, "-acodec", "pcm_s16le", tempURL.path]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus == 0, FileManager.default.fileExists(atPath: tempURL.path) {
+                return tempURL
+            }
+        } catch {
+            print("AudioPlayer ffmpeg decode failed: \(error)")
+        }
+        try? FileManager.default.removeItem(at: tempURL)
+        return nil
+    }
 
     func loadAudio(url: URL) {
         stop()
+        cleanupTempPlaybackFile()
         currentURL = url
         playbackError = nil
 
@@ -23,8 +61,16 @@ class AudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
             return
         }
 
+        var playableURL = url
+        if url.pathExtension.lowercased() == "ogg" {
+            if let decoded = decodeOGGToTempWAV(url: url) {
+                tempPlaybackURL = decoded
+                playableURL = decoded
+            }
+        }
+
         do {
-            let p = try AVAudioPlayer(contentsOf: url)
+            let p = try AVAudioPlayer(contentsOf: playableURL)
             p.delegate = self
             p.volume = 1.0
             let prepared = p.prepareToPlay()
@@ -87,6 +133,7 @@ class AudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     func reset() {
         stop()
+        cleanupTempPlaybackFile()
         player = nil
         currentURL = nil
         duration = 0.0

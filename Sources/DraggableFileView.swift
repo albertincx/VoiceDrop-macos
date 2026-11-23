@@ -5,19 +5,33 @@ struct DraggableAudioCard: View {
     @ObservedObject private var loc = Localization.shared
     let fileURL: URL
     var mp3URL: URL? = nil
+    var oggURL: URL? = nil
     let onCopyPath: () -> Void
     var onCopyMP3: (() -> Void)? = nil
+    var onCopyOGG: (() -> Void)? = nil
     var onCopyWAV: (() -> Void)? = nil
 
     @State private var isHovering: Bool = false
     @State private var showCopiedWAVBadge: Bool = false
     @State private var showCopiedMP3Badge: Bool = false
+    @State private var showCopiedOGGBadge: Bool = false
 
     var resolvedMP3URL: URL? {
         if let mp3 = mp3URL, FileManager.default.fileExists(atPath: mp3.path) {
             return mp3
         }
         let candidate = fileURL.deletingPathExtension().appendingPathExtension("mp3")
+        if FileManager.default.fileExists(atPath: candidate.path) {
+            return candidate
+        }
+        return nil
+    }
+
+    var resolvedOGGURL: URL? {
+        if let ogg = oggURL, FileManager.default.fileExists(atPath: ogg.path) {
+            return ogg
+        }
+        let candidate = fileURL.deletingPathExtension().appendingPathExtension("ogg")
         if FileManager.default.fileExists(atPath: candidate.path) {
             return candidate
         }
@@ -111,6 +125,37 @@ struct DraggableAudioCard: View {
                 .buttonStyle(.plain)
                 .help(loc.t(.copyMP3Help))
 
+                // Separate Button for OGG format
+                Button(action: {
+                    if let onCopyOGG = onCopyOGG {
+                        onCopyOGG()
+                    } else {
+                        copyOGGToClipboard()
+                    }
+                    withAnimation {
+                        showCopiedOGGBadge = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation {
+                            showCopiedOGGBadge = false
+                        }
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showCopiedOGGBadge ? "checkmark.circle.fill" : "waveform.circle")
+                            .foregroundColor(showCopiedOGGBadge ? .green : .purple)
+                        Text(showCopiedOGGBadge ? loc.t(.copiedOGGBadge) : "OGG")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(showCopiedOGGBadge ? .green : .purple)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.purple.opacity(0.12))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help(loc.t(.copyOGGHelp))
+
                 // Separate Button for WAV format
                 Button(action: {
                     if let onCopyWAV = onCopyWAV {
@@ -191,6 +236,16 @@ struct DraggableAudioCard: View {
         pasteboard.clearContents()
         if let mp3 = resolvedMP3URL {
             pasteboard.writeObjects([mp3 as NSURL])
+        } else {
+            pasteboard.writeObjects([fileURL as NSURL])
+        }
+    }
+
+    private func copyOGGToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        if let ogg = resolvedOGGURL {
+            pasteboard.writeObjects([ogg as NSURL])
         } else {
             pasteboard.writeObjects([fileURL as NSURL])
         }

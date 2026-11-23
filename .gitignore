@@ -64,5 +64,4 @@ android/captures/
 .cxx/
 android/app/src/main/assets/model-ru/*
 !android/app/src/main/assets/model-ru/.gitkeep
-
-
+Recordings/

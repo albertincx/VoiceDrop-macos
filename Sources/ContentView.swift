@@ -390,12 +390,14 @@ struct ContentView: View {
             }
 
             // The Draggable Card for Antigravity, Telegram, etc.
-            DraggableAudioCard(fileURL: fileURL, mp3URL: recorder.currentMP3URL, onCopyPath: {
+            DraggableAudioCard(fileURL: fileURL, mp3URL: recorder.currentMP3URL, oggURL: recorder.currentOGGURL, onCopyPath: {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
                 pasteboard.setString(fileURL.path, forType: .string)
             }, onCopyMP3: {
                 recorder.copyMP3ToClipboard()
+            }, onCopyOGG: {
+                recorder.copyOGGToClipboard()
             }, onCopyWAV: {
                 recorder.copyWAVToClipboard()
             })
@@ -444,6 +446,28 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(recorder.isConvertingMP3)
                 .help(loc.t(.copyMP3Help))
+
+                // Separate Button for OGG
+                Button(action: {
+                    recorder.copyOGGToClipboard()
+                }) {
+                    HStack(spacing: 6) {
+                        if recorder.isConvertingOGG {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(loc.t(.convertingOGG))
+                        } else {
+                            Image(systemName: recorder.copiedOGGFeedback ? "checkmark.circle.fill" : "waveform.circle")
+                                .foregroundColor(recorder.copiedOGGFeedback ? .green : .purple)
+                            Text(recorder.copiedOGGFeedback ? loc.t(.copiedOGGDone) : loc.t(.copyOGGButton))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(recorder.copiedOGGFeedback ? .green : .primary)
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(recorder.isConvertingOGG)
+                .help(loc.t(.copyOGGHelp))
 
                 // Separate Button for WAV
                 Button(action: {
@@ -808,6 +832,8 @@ struct ContentView: View {
                             Button(action: {
                                 recorder.currentRecordingURL = fileURL
                                 recorder.currentMP3URL = fileURL
+                                let oggCandidate = fileURL.deletingPathExtension().appendingPathExtension("ogg")
+                                recorder.currentOGGURL = FileManager.default.fileExists(atPath: oggCandidate.path) ? oggCandidate : nil
                                 player.loadAudio(url: fileURL)
                             }) {
                                 Text(loc.t(.selectRecordingButton))

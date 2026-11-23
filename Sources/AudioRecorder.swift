@@ -2,18 +2,22 @@ import Foundation
 import AVFoundation
 import AppKit
 import Combine
+import UniformTypeIdentifiers
 
 class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isRecording: Bool = false
     @Published var isDenoising: Bool = false
     @Published var isConvertingMP3: Bool = false
+    @Published var isConvertingOGG: Bool = false
     @Published var copiedMP3Feedback: Bool = false
+    @Published var copiedOGGFeedback: Bool = false
     @Published var copiedWAVFeedback: Bool = false
     @Published var recordingDuration: TimeInterval = 0.0
     @Published var currentAudioLevel: Float = 0.0
     @Published var audioWaveform: [Float] = Array(repeating: 0.1, count: 24)
     @Published var currentRecordingURL: URL?
     @Published var currentMP3URL: URL?
+    @Published var currentOGGURL: URL?
     @Published var recentRecordings: [URL] = []
     @Published var recordingDurations: [URL: TimeInterval] = [:]
     @Published var noiseSuppressionEnabled: Bool = true
@@ -102,6 +106,8 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 if self.currentRecordingURL == nil, let first = sorted.first {
                     self.currentRecordingURL = first
                     self.currentMP3URL = first
+                    let oggCandidate = first.deletingPathExtension().appendingPathExtension("ogg")
+                    self.currentOGGURL = FileManager.default.fileExists(atPath: oggCandidate.path) ? oggCandidate : nil
                 }
                 self.loadDurationsIfNeeded(for: sorted)
             }
@@ -144,7 +150,8 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         let baseURL = url.deletingPathExtension()
         let wavURL = baseURL.appendingPathExtension("wav")
         let mp3URL = baseURL.appendingPathExtension("mp3")
-        let candidates = Set([url, wavURL, mp3URL])
+        let oggURL = baseURL.appendingPathExtension("ogg")
+        let candidates = Set([url, wavURL, mp3URL, oggURL])
 
         for candidate in candidates {
             if FileManager.default.fileExists(atPath: candidate.path) {
@@ -154,6 +161,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
         let wasCurrent = (currentRecordingURL != nil && candidates.contains(currentRecordingURL!))
             || (currentMP3URL != nil && candidates.contains(currentMP3URL!))
+            || (currentOGGURL != nil && candidates.contains(currentOGGURL!))
 
         DispatchQueue.main.async {
             self.recentRecordings.removeAll { candidates.contains($0) }
@@ -161,9 +169,12 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 if let next = self.recentRecordings.first {
                     self.currentRecordingURL = next
                     self.currentMP3URL = next
+                    let oggCandidate = next.deletingPathExtension().appendingPathExtension("ogg")
+                    self.currentOGGURL = FileManager.default.fileExists(atPath: oggCandidate.path) ? oggCandidate : nil
                 } else {
                     self.currentRecordingURL = nil
                     self.currentMP3URL = nil
+                    self.currentOGGURL = nil
                 }
                 self.isDenoised = false
             }
@@ -219,6 +230,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         isDenoised = false
         previousRecordingURL = currentRecordingURL
         currentMP3URL = nil
+        currentOGGURL = nil
         hasReceivedAudioSignal = false
         silentTicks = 0
 
@@ -328,6 +340,8 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 if let current = self.currentRecordingURL {
                     let mp3Candidate = current.deletingPathExtension().appendingPathExtension("mp3")
                     self.currentMP3URL = FileManager.default.fileExists(atPath: mp3Candidate.path) ? mp3Candidate : nil
+                    let oggCandidate = current.deletingPathExtension().appendingPathExtension("ogg")
+                    self.currentOGGURL = FileManager.default.fileExists(atPath: oggCandidate.path) ? oggCandidate : nil
                 }
                 self.errorMessage = Localization.shared.t(.silentRecordingDiscardedError)
                 self.loadRecentRecordings()
@@ -390,6 +404,20 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
         if FileManager.default.fileExists(atPath: "convert_mp3.py") {
             return URL(fileURLWithPath: "convert_mp3.py").path
+        }
+        return nil
+    }
+
+    private func findConvertOGGScript() -> String? {
+        if let bundlePath = Bundle.main.path(forResource: "convert_ogg", ofType: "py") {
+            return bundlePath
+        }
+        let devScript = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("convert_ogg.py").path
+        if FileManager.default.fileExists(atPath: devScript) {
+            return devScript
+        }
+        if FileManager.default.fileExists(atPath: "convert_ogg.py") {
+            return URL(fileURLWithPath: "convert_ogg.py").path
         }
         return nil
     }
@@ -503,11 +531,110 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
     }
 
+    func convertToOGG(fileURL: URL, completion: @escaping (URL?) -> Void) {
+        if fileURL.pathExtension.lowercased() == "ogg", FileManager.default.fileExists(atPath: fileURL.path) {
+            DispatchQueue.main.async {
+                self.currentOGGURL = fileURL
+                completion(fileURL)
+            }
+            return
+        }
+
+        let oggURL = fileURL.deletingPathExtension().appendingPathExtension("ogg")
+        if FileManager.default.fileExists(atPath: oggURL.path) {
+            DispatchQueue.main.async {
+                self.currentOGGURL = oggURL
+                completion(oggURL)
+            }
+            return
+        }
+
+        guard let pythonPath = findPythonExecutable(),
+              let scriptPath = findConvertOGGScript() else {
+            completion(nil)
+            return
+        }
+
+        // Prefer lossless WAV sibling as source if available
+        let wavSibling = fileURL.deletingPathExtension().appendingPathExtension("wav")
+        let sourceURL = FileManager.default.fileExists(atPath: wavSibling.path) ? wavSibling : fileURL
+
+        DispatchQueue.main.async {
+            self.isConvertingOGG = true
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: pythonPath)
+            process.arguments = [scriptPath, sourceURL.path, oggURL.path]
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                print("OGG conversion failed: \(error)")
+            }
+
+            DispatchQueue.main.async {
+                self.isConvertingOGG = false
+                if FileManager.default.fileExists(atPath: oggURL.path) {
+                    self.currentOGGURL = oggURL
+                    completion(oggURL)
+                } else {
+                    completion(nil)
+                }
+            }
+        }
+    }
+
+    func copyOGGToClipboard() {
+        guard let url = currentRecordingURL else { return }
+
+        if url.pathExtension.lowercased() == "ogg", FileManager.default.fileExists(atPath: url.path) {
+            self.currentOGGURL = url
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects([url as NSURL])
+            triggerCopiedOGGFeedback()
+            return
+        }
+
+        let oggCandidate = url.deletingPathExtension().appendingPathExtension("ogg")
+        if FileManager.default.fileExists(atPath: oggCandidate.path) {
+            self.currentOGGURL = oggCandidate
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects([oggCandidate as NSURL])
+            triggerCopiedOGGFeedback()
+            return
+        }
+
+        convertToOGG(fileURL: url) { [weak self] resultURL in
+            guard let self = self, let ogg = resultURL else { return }
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects([ogg as NSURL])
+            self.triggerCopiedOGGFeedback()
+        }
+    }
+
+    private func triggerCopiedOGGFeedback() {
+        DispatchQueue.main.async {
+            self.copiedOGGFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.copiedOGGFeedback = false
+        }
+    }
+
     func copyWAVToClipboard() {
         guard let url = currentRecordingURL else { return }
+        let wavCandidate = url.deletingPathExtension().appendingPathExtension("wav")
+        let targetURL = FileManager.default.fileExists(atPath: wavCandidate.path) ? wavCandidate : url
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.writeObjects([url as NSURL])
+        pasteboard.writeObjects([targetURL as NSURL])
         triggerCopiedWAVFeedback()
     }
 
@@ -530,9 +657,17 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.audio, .wav, .mp3, .mpeg4Audio]
+        var types: [UTType] = [.audio, .wav, .mp3, .mpeg4Audio]
+        if let oggType = UTType(filenameExtension: "ogg") {
+            types.append(oggType)
+        }
+        panel.allowedContentTypes = types
         if panel.runModal() == .OK, let url = panel.url {
             self.currentRecordingURL = url
+            let mp3Candidate = url.deletingPathExtension().appendingPathExtension("mp3")
+            self.currentMP3URL = FileManager.default.fileExists(atPath: mp3Candidate.path) ? mp3Candidate : nil
+            let oggCandidate = url.deletingPathExtension().appendingPathExtension("ogg")
+            self.currentOGGURL = FileManager.default.fileExists(atPath: oggCandidate.path) ? oggCandidate : nil
             self.isDenoised = false
             self.loadRecentRecordings()
             self.onRecordingFinished?(url)

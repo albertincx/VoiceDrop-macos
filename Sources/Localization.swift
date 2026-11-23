@@ -83,17 +83,22 @@ class Localization: ObservableObject {
         case dragHint
         case copyWavHelp
         case copyMP3Help
+        case copyOGGHelp
         case showInFinderHelp
         case denoiseButton
         case denoiseApplied
         case denoisingProgress
         case copyAsMP3Button
         case copiedMP3Done
+        case copyOGGButton
+        case copiedOGGDone
         case copyWavButton
         case copiedWAVDone
         case copiedMP3Badge
+        case copiedOGGBadge
         case copiedWAVBadge
         case convertingMP3
+        case convertingOGG
         case cleanVoiceTag
         case reloadAudioHelp
 
@@ -160,8 +165,8 @@ class Localization: ObservableObject {
                 return lang == .en ? "Open File..." : "Выбрать файл..."
             case .chooseFileHelp:
                 return lang == .en
-                    ? "Open any audio file (WAV, MP3, M4A) to play or transcribe"
-                    : "Выбрать любой аудиофайл (WAV, MP3, M4A) для воспроизведения или распознавания"
+                    ? "Open any audio file (WAV, MP3, OGG, M4A) to play or transcribe"
+                    : "Выбрать любой аудиофайл (WAV, MP3, OGG, M4A) для воспроизведения или распознавания"
             case .recordingsFolder:
                 return lang == .en ? "Recordings Folder" : "Папка записей"
             case .recordingsFolderHelp:
@@ -252,6 +257,10 @@ class Localization: ObservableObject {
                 return lang == .en
                     ? "Copy recording as MP3 (default) to clipboard"
                     : "Скопировать запись как MP3 (по умолчанию) в буфер обмена"
+            case .copyOGGHelp:
+                return lang == .en
+                    ? "Copy recording as OGG (Opus) to clipboard"
+                    : "Скопировать запись как OGG (Opus) в буфер обмена"
             case .showInFinderHelp:
                 return lang == .en ? "Reveal in Finder" : "Показать в Finder"
             case .denoiseButton:
@@ -264,16 +273,24 @@ class Localization: ObservableObject {
                 return lang == .en ? "Copy (MP3)" : "Скопировать (MP3)"
             case .copiedMP3Done:
                 return lang == .en ? "MP3 copied to clipboard!" : "MP3 скопирован в буфер!"
+            case .copyOGGButton:
+                return lang == .en ? "Copy OGG" : "Скопировать OGG"
+            case .copiedOGGDone:
+                return lang == .en ? "OGG copied to clipboard!" : "OGG скопирован в буфер!"
             case .copyWavButton:
                 return lang == .en ? "Copy WAV" : "Скопировать WAV"
             case .copiedWAVDone:
                 return lang == .en ? "WAV copied to clipboard!" : "WAV скопирован в буфер!"
             case .copiedMP3Badge:
                 return lang == .en ? "Copied MP3!" : "Скопирован MP3!"
+            case .copiedOGGBadge:
+                return lang == .en ? "Copied OGG!" : "Скопирован OGG!"
             case .copiedWAVBadge:
                 return lang == .en ? "Copied WAV!" : "Скопирован WAV!"
             case .convertingMP3:
                 return lang == .en ? "Converting to MP3..." : "Конвертация в MP3..."
+            case .convertingOGG:
+                return lang == .en ? "Converting to OGG..." : "Конвертация в OGG..."
             case .cleanVoiceTag:
                 return lang == .en ? "Clean Voice" : "Чистый голос"
             case .reloadAudioHelp:
