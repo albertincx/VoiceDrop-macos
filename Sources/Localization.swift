@@ -114,6 +114,7 @@ class Localization: ObservableObject {
         case modelTiny
         case transcribeButton
         case transcribingProgress
+        case autoTranscribeAfterStopToggle
         case transcriptionResultLabel
         case copyTextButton
         case copiedTextDone
@@ -331,6 +332,8 @@ class Localization: ObservableObject {
                 return lang == .en ? "Transcribe Speech" : "Распознать текст"
             case .transcribingProgress:
                 return lang == .en ? "Transcribing..." : "Распознавание..."
+            case .autoTranscribeAfterStopToggle:
+                return lang == .en ? "Auto-transcribe after Stop" : "Автораспознавание после Стоп"
             case .transcriptionResultLabel:
                 return lang == .en ? "Transcription Result:" : "Результат распознавания:"
             case .copyTextButton:

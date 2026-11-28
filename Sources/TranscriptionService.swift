@@ -9,8 +9,14 @@ class TranscriptionService: ObservableObject {
     @Published var statusMessage: String = Localization.shared.t(.statusReadyToTranscribe)
     @Published var errorMessage: String?
     @Published var copiedFeedback: Bool = false
+    private static let selectedLanguageKey = "VoiceDrop.selectedSpokenLanguage"
+
     @Published var selectedModel: String = "large-v3-turbo"
-    @Published var selectedLanguage: String = "auto"
+    @Published var selectedLanguage: String {
+        didSet {
+            UserDefaults.standard.set(selectedLanguage, forKey: Self.selectedLanguageKey)
+        }
+    }
 
     @Published var isTranslating: Bool = false
     @Published var translatedText: String = ""
@@ -20,6 +26,11 @@ class TranscriptionService: ObservableObject {
     let modelKeys = ["large-v3-turbo", "tiny"]
     let languageKeys = ["auto", "en", "ru", "de", "es", "fr"]
     let translateTargetKeys = ["en", "ru", "de", "es", "fr", "zh-CN"]
+
+    init() {
+        let saved = UserDefaults.standard.string(forKey: Self.selectedLanguageKey) ?? "auto"
+        self.selectedLanguage = ["auto", "en", "ru", "de", "es", "fr"].contains(saved) ? saved : "auto"
+    }
 
     func translateTargetShortName(for key: String) -> String {
         switch key {

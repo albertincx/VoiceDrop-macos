@@ -29,6 +29,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
     var onBeforeStartRecording: (() -> Void)?
     var onRecordingFinished: ((URL) -> Void)?
+    var onRecordingStopped: ((URL) -> Void)?
 
     private var audioRecorder: AVAudioRecorder?
     private var meterTimer: Timer?
@@ -395,12 +396,14 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     self.isDenoised = true
                     self.loadRecentRecordings()
                     self.onRecordingFinished?(cleanURL)
+                    self.onRecordingStopped?(cleanURL)
                     self.convertToMP3(fileURL: cleanURL) { _ in }
                 }
             } else {
                 self.loadRecentRecordings()
                 self.currentRecordingURL = url
                 self.onRecordingFinished?(url)
+                self.onRecordingStopped?(url)
                 self.convertToMP3(fileURL: url) { _ in }
             }
         }

@@ -10,7 +10,8 @@ struct ContentView: View {
 
     @State private var selectedTab: Int = 0
     @State private var showSettings: Bool = false
-    @State private var isTranscriptionExpanded: Bool = false
+    @State private var isTranscriptionExpanded: Bool = true
+    @AppStorage("VoiceDrop.autoTranscribeAfterStop") private var autoTranscribeAfterStop: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,15 +27,13 @@ struct ContentView: View {
 
                     // Main Recording Deck
                     recordingDeckView
-
-                    // Active Recording Player & Drag-and-Drop Card
-                    if let url = recorder.currentRecordingURL {
-                        dragAndDropSection(fileURL: url)
-                    }
-
                     // Local Speech-to-Text Section
                     if recorder.currentRecordingURL != nil || !transcriber.transcribedText.isEmpty {
                         transcriptionSection
+                    }
+                    // Active Recording Player & Drag-and-Drop Card
+                    if let url = recorder.currentRecordingURL {
+                        dragAndDropSection(fileURL: url)
                     }
 
                     // Recent History
@@ -60,6 +59,11 @@ struct ContentView: View {
             }
             recorder.onRecordingFinished = { url in
                 player.loadAudio(url: url)
+            }
+            recorder.onRecordingStopped = { url in
+                if autoTranscribeAfterStop {
+                    transcriber.transcribe(fileURL: url)
+                }
             }
             if let first = recorder.recentRecordings.first {
                 recorder.currentRecordingURL = first
@@ -697,6 +701,10 @@ struct ContentView: View {
                     .disabled(transcriber.isTranscribing)
                 }
             }
+
+            Toggle(loc.t(.autoTranscribeAfterStopToggle), isOn: $autoTranscribeAfterStop)
+                .toggleStyle(.checkbox)
+                .font(.system(size: 12))
 
             // Status or Error
             if let err = transcriber.errorMessage {
