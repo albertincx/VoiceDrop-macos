@@ -73,6 +73,11 @@ class Localization: ObservableObject {
 
         case recordButton
         case stopButton
+        case pauseButton
+        case resumeButton
+        case pausedBadge
+        case pauseRecordingActionHelp
+        case resumeRecordingActionHelp
         case recordingActiveHint
         case recordingIdleHint
         case spacebarHintRecording
@@ -222,6 +227,16 @@ class Localization: ObservableObject {
                 return lang == .en ? "Record" : "Запись"
             case .stopButton:
                 return lang == .en ? "Stop" : "Стоп"
+            case .pauseButton:
+                return lang == .en ? "Pause" : "Пауза"
+            case .resumeButton:
+                return lang == .en ? "Resume" : "Далее"
+            case .pausedBadge:
+                return lang == .en ? "PAUSED" : "ПАУЗА"
+            case .pauseRecordingActionHelp:
+                return lang == .en ? "Pause recording" : "Поставить запись на паузу"
+            case .resumeRecordingActionHelp:
+                return lang == .en ? "Resume recording" : "Продолжить запись"
             case .recordingActiveHint:
                 return lang == .en
                     ? "Recording in progress. Noise suppression active."

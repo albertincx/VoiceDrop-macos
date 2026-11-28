@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 
 class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published var isRecording: Bool = false
+    @Published var isPaused: Bool = false
     @Published var isDenoising: Bool = false
     @Published var isConvertingMP3: Bool = false
     @Published var isConvertingOGG: Bool = false
@@ -33,6 +34,7 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
     private var meterTimer: Timer?
     private var recordingTimer: Timer?
     private var recordingStartTime: Date?
+    private var accumulatedDuration: TimeInterval = 0.0
     private var hasReceivedAudioSignal: Bool = false
     private var silentTicks: Int = 0
     private var previousRecordingURL: URL?
@@ -267,16 +269,18 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
             self.audioRecorder = recorder
             self.currentRecordingURL = fileURL
             self.isRecording = true
+            self.isPaused = false
+            self.accumulatedDuration = 0.0
             self.recordingStartTime = Date()
             self.recordingDuration = 0.0
 
             self.recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-                guard let self = self, let start = self.recordingStartTime else { return }
-                self.recordingDuration = Date().timeIntervalSince(start)
+                guard let self = self, !self.isPaused, let start = self.recordingStartTime else { return }
+                self.recordingDuration = self.accumulatedDuration + Date().timeIntervalSince(start)
             }
 
             self.meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-                guard let self = self, let recorder = self.audioRecorder, recorder.isRecording else { return }
+                guard let self = self, !self.isPaused, let recorder = self.audioRecorder, recorder.isRecording else { return }
                 recorder.updateMeters()
                 let avg = recorder.averagePower(forChannel: 0)
                 let peak = recorder.peakPower(forChannel: 0)
@@ -314,6 +318,39 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         return data.dropFirst(44).allSatisfy { $0 == 0 }
     }
 
+    func togglePauseRecording() {
+        guard isRecording else { return }
+        if isPaused {
+            resumeRecording()
+        } else {
+            pauseRecording()
+        }
+    }
+
+    func pauseRecording() {
+        guard isRecording, !isPaused, let recorder = audioRecorder else { return }
+        if let start = recordingStartTime {
+            accumulatedDuration += Date().timeIntervalSince(start)
+            recordingDuration = accumulatedDuration
+        }
+        recordingStartTime = nil
+        recorder.pause()
+        isPaused = true
+        currentAudioLevel = 0.0
+    }
+
+    func resumeRecording() {
+        guard isRecording, isPaused, let recorder = audioRecorder else { return }
+        let resumed = recorder.record()
+        guard resumed else {
+            errorMessage = "Не удалось возобновить запись с микрофона."
+            return
+        }
+        recordingStartTime = Date()
+        isPaused = false
+        silentTicks = 0
+    }
+
     func stopRecording() {
         guard isRecording else { return }
 
@@ -328,6 +365,9 @@ class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
         DispatchQueue.main.async {
             self.isRecording = false
+            self.isPaused = false
+            self.accumulatedDuration = 0.0
+            self.recordingStartTime = nil
             self.currentAudioLevel = 0.0
             self.audioWaveform = Array(repeating: 0.1, count: 24)
 

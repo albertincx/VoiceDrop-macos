@@ -3,6 +3,7 @@ import SwiftUI
 struct WaveformVisualizer: View {
     let levels: [Float]
     let isRecording: Bool
+    var isPaused: Bool = false
 
     var body: some View {
         HStack(spacing: 3) {
@@ -10,7 +11,9 @@ struct WaveformVisualizer: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(
                         LinearGradient(
-                            colors: isRecording ? [Color.red, Color.orange] : [Color.gray.opacity(0.3), Color.gray.opacity(0.5)],
+                            colors: isRecording
+                                ? (isPaused ? [Color.orange.opacity(0.6), Color.orange.opacity(0.4)] : [Color.red, Color.orange])
+                                : [Color.gray.opacity(0.3), Color.gray.opacity(0.5)],
                             startPoint: .bottom,
                             endPoint: .top
                         )

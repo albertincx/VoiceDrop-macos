@@ -300,67 +300,7 @@ struct ContentView: View {
             )
 
             // Compact Horizontal Recording Deck
-            HStack(spacing: 20) {
-                // Record Button
-                ZStack {
-                    if recorder.isRecording {
-                        Circle()
-                            .stroke(Color.red.opacity(0.35), lineWidth: 6)
-                            .frame(width: 82, height: 82)
-                            .scaleEffect(1.0 + CGFloat(recorder.currentAudioLevel) * 0.25)
-                            .animation(.easeOut(duration: 0.1), value: recorder.currentAudioLevel)
-                    }
-
-                    Button(action: {
-                        recorder.toggleRecording()
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(recorder.isRecording ? Color.red : Color.blue)
-                                .frame(width: 68, height: 68)
-                                .shadow(color: (recorder.isRecording ? Color.red : Color.blue).opacity(0.4), radius: 8, x: 0, y: 4)
-
-                            VStack(spacing: 3) {
-                                Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
-
-                                Text(recorder.isRecording ? loc.t(.stopButton) : loc.t(.recordButton))
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(width: 84, height: 84)
-
-                // Duration, Waveform & Shortcut Hint
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 14) {
-                        Text(formattedDuration(recorder.recordingDuration))
-                            .font(.system(size: 26, weight: .medium, design: .monospaced))
-                            .foregroundColor(recorder.isRecording ? .red : .primary)
-
-                        WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording)
-                    }
-
-                    HStack(spacing: 6) {
-                        Text(loc.t(.spaceKey))
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(NSColor.controlColor))
-                            .cornerRadius(4)
-                        Text(recorder.isRecording ? loc.t(.spacebarHintRecording) : loc.t(.spacebarHintIdle))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
+            recordingControlsRow
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 4)
@@ -370,9 +310,128 @@ struct ContentView: View {
                 .fill(Color(NSColor.controlBackgroundColor).opacity(0.7))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(recorder.isRecording ? Color.red.opacity(0.4) : Color.gray.opacity(0.15), lineWidth: 1.5)
+                        .stroke(deckBorderColor, lineWidth: 1.5)
                 )
         )
+    }
+
+    private var deckBorderColor: Color {
+        if !recorder.isRecording {
+            return Color.gray.opacity(0.15)
+        }
+        return recorder.isPaused ? Color.orange.opacity(0.45) : Color.red.opacity(0.4)
+    }
+
+    private var recordingControlsRow: some View {
+        HStack(spacing: 16) {
+            recordStopButton
+
+            if recorder.isRecording {
+                pauseResumeButton
+                    .transition(.scale.combined(with: .opacity))
+            }
+
+            recordingStatusColumn
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+    }
+
+    private var recordStopButton: some View {
+        ZStack {
+            if recorder.isRecording && !recorder.isPaused {
+                Circle()
+                    .stroke(Color.red.opacity(0.35), lineWidth: 6)
+                    .frame(width: 82, height: 82)
+                    .scaleEffect(1.0 + CGFloat(recorder.currentAudioLevel) * 0.25)
+                    .animation(.easeOut(duration: 0.1), value: recorder.currentAudioLevel)
+            }
+
+            Button(action: {
+                recorder.toggleRecording()
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(recorder.isRecording ? Color.red : Color.blue)
+                        .frame(width: 68, height: 68)
+                        .shadow(color: (recorder.isRecording ? Color.red : Color.blue).opacity(0.4), radius: 8, x: 0, y: 4)
+
+                    VStack(spacing: 3) {
+                        Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text(recorder.isRecording ? loc.t(.stopButton) : loc.t(.recordButton))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(width: 84, height: 84)
+    }
+
+    private var pauseResumeButton: some View {
+        Button(action: {
+            recorder.togglePauseRecording()
+        }) {
+            ZStack {
+                Circle()
+                    .fill(recorder.isPaused ? Color.green : Color.orange)
+                    .frame(width: 58, height: 58)
+                    .shadow(color: (recorder.isPaused ? Color.green : Color.orange).opacity(0.35), radius: 6, x: 0, y: 3)
+
+                VStack(spacing: 3) {
+                    Image(systemName: recorder.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text(recorder.isPaused ? loc.t(.resumeButton) : loc.t(.pauseButton))
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(recorder.isPaused ? loc.t(.resumeRecordingActionHelp) : loc.t(.pauseRecordingActionHelp))
+    }
+
+    private var recordingStatusColumn: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 14) {
+                HStack(spacing: 8) {
+                    Text(formattedDuration(recorder.recordingDuration))
+                        .font(.system(size: 26, weight: .medium, design: .monospaced))
+                        .foregroundColor(recorder.isRecording ? (recorder.isPaused ? .orange : .red) : .primary)
+
+                    if recorder.isRecording && recorder.isPaused {
+                        Text(loc.t(.pausedBadge))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange)
+                            .cornerRadius(4)
+                    }
+                }
+
+                WaveformVisualizer(levels: recorder.audioWaveform, isRecording: recorder.isRecording && !recorder.isPaused)
+            }
+
+            HStack(spacing: 6) {
+                Text(loc.t(.spaceKey))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(NSColor.controlColor))
+                    .cornerRadius(4)
+                Text(recorder.isRecording ? loc.t(.spacebarHintRecording) : loc.t(.spacebarHintIdle))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+        }
     }
 
     // MARK: - Drag and Drop + Audio Player Section
